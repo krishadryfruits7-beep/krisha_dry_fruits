@@ -45,9 +45,18 @@ export default function GradesGuide({ onShop, onViewProduct, products }: GradesG
       </div>
 
       <div className="space-y-4">
-        {loading || empty ? (
-          // Show skeletons while loading, or if no products yet
+        {loading ? (
           [...Array(5)].map((_, i) => <SkeletonRow key={i} />)
+        ) : empty ? (
+          <div className="card p-12 text-center border border-dashed border-brand-300 bg-cream-50/50">
+            <p className="font-serif text-xl font-bold text-brand-950 mb-2">Catalog Currently Clean</p>
+            <p className="text-sm text-brand-600 mb-6 max-w-md mx-auto">
+              There are no cashew grades or products listed in the catalog yet. Once products are created in the admin panel, they will appear here with full caliber details.
+            </p>
+            <button onClick={onShop} className="btn-primary">
+              Explore Storefront
+            </button>
+          </div>
         ) : (
           products.map((product, i) => {
             const gradeInfo = GRADES.find((g) => g.grade.toUpperCase() === product.grade.toUpperCase());
@@ -108,12 +117,14 @@ export default function GradesGuide({ onShop, onViewProduct, products }: GradesG
         )}
       </div>
 
-      <div className="text-center mt-10">
-        <button onClick={onShop} className="btn-primary">
-          Shop All Cashews
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
+      {!empty && (
+        <div className="text-center mt-10">
+          <button onClick={onShop} className="btn-primary">
+            Shop All Cashews
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

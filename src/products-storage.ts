@@ -6,21 +6,16 @@ const PRODUCTS_STORAGE_KEY = 'kdf_products_catalog_v2';
 const PRODUCTS_EVENT = 'kdf_products_catalog_change';
 
 export function getStoredProducts(): Product[] {
-  if (typeof window === 'undefined') return PRODUCTS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
     if (!raw) {
-      // Initialize with default products
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(PRODUCTS));
-      return PRODUCTS;
+      return [];
     }
     const list: Product[] = JSON.parse(raw);
-    if (Array.isArray(list) && list.length > 0) {
-      return list;
-    }
-    return PRODUCTS;
+    return Array.isArray(list) ? list : [];
   } catch {
-    return PRODUCTS;
+    return [];
   }
 }
 
@@ -37,7 +32,7 @@ export function saveStoredProducts(list: Product[]): void {
  * Synchronizes server products from MongoDB Atlas into local storage, ensuring newest items are always on top.
  */
 export function syncWithServerProducts(serverList: Product[]): Product[] {
-  if (!Array.isArray(serverList) || serverList.length === 0) return getStoredProducts();
+  if (!Array.isArray(serverList)) return getStoredProducts();
 
   const formattedServerList: Product[] = serverList.map((p) => ({
     ...p,
@@ -122,12 +117,12 @@ export function deleteStoredProduct(id: string): Product[] {
 export function resetStoredProducts(): Product[] {
   try {
     localStorage.removeItem(PRODUCTS_STORAGE_KEY);
-    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(PRODUCTS));
-    window.dispatchEvent(new CustomEvent(PRODUCTS_EVENT, { detail: PRODUCTS }));
+    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify([]));
+    window.dispatchEvent(new CustomEvent(PRODUCTS_EVENT, { detail: [] }));
   } catch (err) {
     console.error('Failed to reset products', err);
   }
-  return PRODUCTS;
+  return [];
 }
 
 export function useStoredProducts(): Product[] {

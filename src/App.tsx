@@ -62,7 +62,7 @@ function App() {
     setProductsLoading(true);
     api.products.list()
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           syncWithServerProducts(data as Product[]);
         }
       })
@@ -309,7 +309,11 @@ function App() {
                 onView={viewProduct}
                 loading={productsLoading}
                 title="Our Premium Cashew Collection"
-                subtitle={`${availableGrades.length} artisanal grades • ${products.filter((p) => p.active !== false).length} distinct harvests & preparations across Goa & Karnataka.`}
+                subtitle={
+                  products.filter((p) => p.active !== false).length > 0
+                    ? `${availableGrades.length} artisanal grades • ${products.filter((p) => p.active !== false).length} distinct harvests & preparations across Goa & Karnataka.`
+                    : undefined
+                }
               />
               <StoreLocationSection />
               <Testimonials />
@@ -475,6 +479,18 @@ function App() {
               onNavigate={navigate}
               onOpenCart={() => setCartOpen(true)}
             />
+          )}
+
+          {page === 'product' && !selectedProduct && (
+            <div className="max-w-md mx-auto py-24 px-4 text-center">
+              <h3 className="font-serif text-xl font-bold text-brand-950">Product Not Found</h3>
+              <p className="text-xs text-brand-500 mt-2 mb-6">
+                The requested cashew harvest is unavailable or catalog is currently empty.
+              </p>
+              <button onClick={() => navigate('products')} className="btn-primary text-xs py-2 px-5">
+                Return to Storefront
+              </button>
+            </div>
           )}
 
           {page === 'grades' && (

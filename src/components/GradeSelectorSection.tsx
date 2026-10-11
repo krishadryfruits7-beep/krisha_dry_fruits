@@ -21,13 +21,6 @@ export interface GradeCardItem {
   varietiesSummary?: string;
 }
 
-const DEFAULT_GRADE_CARDS: GradeCardItem[] = [
-  { grade: 'W180', label: 'King Size', scale: 'scale-105', image: '/cashew_single_nut.jpg', productCount: 1 },
-  { grade: 'W210', label: 'Large', scale: 'scale-100', image: '/cashew_single_nut.jpg', productCount: 1 },
-  { grade: 'W240', label: 'Medium-Large', scale: 'scale-95', image: '/cashew_single_nut.jpg', productCount: 1 },
-  { grade: 'W320', label: 'Standard', scale: 'scale-90', image: '/cashew_single_nut.jpg', productCount: 1 },
-  { grade: 'W450', label: 'Small Whole', scale: 'scale-[0.82]', image: '/cashew_single_nut.jpg', productCount: 1 },
-];
 
 export default function GradeSelectorSection({
   onSelectGrade,
@@ -43,7 +36,7 @@ export default function GradeSelectorSection({
 
   // Derive dynamic grade cards from actual database/products if available
   const gradeCards: GradeCardItem[] = (() => {
-    if (!products || products.length === 0) return DEFAULT_GRADE_CARDS;
+    if (!products || products.length === 0) return [];
 
     // Group products by unique grade
     const gradeMap = new Map<string, {
@@ -97,7 +90,7 @@ export default function GradeSelectorSection({
     });
 
     const list = Array.from(gradeMap.values());
-    if (list.length === 0) return DEFAULT_GRADE_CARDS;
+    if (list.length === 0) return [];
 
     return list.map((item, idx) => {
       const scales = ['scale-105', 'scale-100', 'scale-95', 'scale-90', 'scale-[0.82]'];
@@ -219,51 +212,60 @@ export default function GradeSelectorSection({
         </div>
 
         {/* Grade Cards: Horizontally scrollable track */}
-        <div
-          ref={gradesScrollRef}
-          className="flex items-stretch gap-3 sm:gap-5 overflow-x-auto no-scrollbar pb-4 pt-1 px-1 snap-x scroll-smooth"
-        >
-          {gradeCards.map((item) => (
-            <button
-              key={item.grade}
-              onClick={() => onSelectGrade(item.grade)}
-              className="flex-shrink-0 w-[148px] sm:w-[172px] md:w-[195px] lg:w-[215px] snap-start flex flex-col items-center justify-between p-4 sm:p-5 rounded-3xl bg-white border border-brand-200/80 shadow-luxury hover:shadow-luxury-lg hover:-translate-y-1.5 hover:border-brand-500 transition-all duration-300 text-center group cursor-pointer"
-            >
-              {/* Single Cashew Visual in luxurious prominent tile */}
-              <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0] border border-brand-200/70 flex items-center justify-center mb-3 shadow-inner group-hover:scale-105 transition-transform duration-300 p-2">
-                <img
-                  src={item.image || '/cashew_single_nut.jpg'}
-                  alt={`${item.grade} cashew nut`}
-                  className={`w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 object-contain ${item.scale} transition-transform duration-300 group-hover:scale-110 drop-shadow-md`}
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = '/cashew_single_nut.jpg';
-                  }}
-                />
-              </div>
-
-              {/* Grade Code */}
-              <div className="font-serif text-lg sm:text-2xl font-bold text-brand-950 group-hover:text-brand-700 transition-colors">
-                {item.grade}
-              </div>
-
-              {/* Subtitle / Size Label */}
-              <div className="text-xs sm:text-sm text-brand-600 font-medium mt-0.5 truncate max-w-full px-1">
-                {item.label}
-              </div>
-
-              {/* Stock / Variety Count or Price */}
-              {item.productCount && item.productCount > 1 ? (
-                <div className="text-[10px] sm:text-xs font-bold text-amber-900 bg-amber-100/90 border border-amber-200/80 px-2.5 py-0.5 rounded-full mt-2">
-                  {item.productCount} Harvests / Styles
+        {gradeCards.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-brand-300/80 bg-white/70 py-8 px-4 text-center">
+            <p className="text-sm font-semibold text-brand-900">No Cashew Grades Added Yet</p>
+            <p className="text-xs text-brand-600 mt-1">
+              Add products in the admin panel to display available cashew grades and size calibers here.
+            </p>
+          </div>
+        ) : (
+          <div
+            ref={gradesScrollRef}
+            className="flex items-stretch gap-3 sm:gap-5 overflow-x-auto no-scrollbar pb-4 pt-1 px-1 snap-x scroll-smooth"
+          >
+            {gradeCards.map((item) => (
+              <button
+                key={item.grade}
+                onClick={() => onSelectGrade(item.grade)}
+                className="flex-shrink-0 w-[148px] sm:w-[172px] md:w-[195px] lg:w-[215px] snap-start flex flex-col items-center justify-between p-4 sm:p-5 rounded-3xl bg-white border border-brand-200/80 shadow-luxury hover:shadow-luxury-lg hover:-translate-y-1.5 hover:border-brand-500 transition-all duration-300 text-center group cursor-pointer"
+              >
+                {/* Single Cashew Visual in luxurious prominent tile */}
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0] border border-brand-200/70 flex items-center justify-center mb-3 shadow-inner group-hover:scale-105 transition-transform duration-300 p-2">
+                  <img
+                    src={item.image || '/cashew_single_nut.jpg'}
+                    alt={`${item.grade} cashew nut`}
+                    className={`w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 object-contain ${item.scale} transition-transform duration-300 group-hover:scale-110 drop-shadow-md`}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/cashew_single_nut.jpg';
+                    }}
+                  />
                 </div>
-              ) : item.minPrice ? (
-                <div className="text-[11px] sm:text-xs font-semibold text-forest-800 bg-forest-50 px-2.5 py-0.5 rounded-full mt-2 border border-forest-200/60">
-                  from {formatPrice(item.minPrice)}
+
+                {/* Grade Code */}
+                <div className="font-serif text-lg sm:text-2xl font-bold text-brand-950 group-hover:text-brand-700 transition-colors">
+                  {item.grade}
                 </div>
-              ) : null}
-            </button>
-          ))}
-        </div>
+
+                {/* Subtitle / Size Label */}
+                <div className="text-xs sm:text-sm text-brand-600 font-medium mt-0.5 truncate max-w-full px-1">
+                  {item.label}
+                </div>
+
+                {/* Stock / Variety Count or Price */}
+                {item.productCount && item.productCount > 1 ? (
+                  <div className="text-[10px] sm:text-xs font-bold text-amber-900 bg-amber-100/90 border border-amber-200/80 px-2.5 py-0.5 rounded-full mt-2">
+                    {item.productCount} Harvests / Styles
+                  </div>
+                ) : item.minPrice ? (
+                  <div className="text-[11px] sm:text-xs font-semibold text-forest-800 bg-forest-50 px-2.5 py-0.5 rounded-full mt-2 border border-forest-200/60">
+                    from {formatPrice(item.minPrice)}
+                  </div>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Location-wise Cashew Section Header */}
         <div className="mt-8 sm:mt-12">

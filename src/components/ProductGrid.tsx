@@ -52,8 +52,8 @@ export default function ProductGrid({ products, onView, title, subtitle, loading
           : products.length === 0
             ? (
               <div className="col-span-full card p-12 text-center border border-dashed border-brand-300 bg-cream-50/50">
-                <p className="font-serif text-lg text-brand-900 mb-1">No products found</p>
-                <p className="text-sm text-brand-500">Try adjusting your search query or filters.</p>
+                <p className="font-serif text-lg text-brand-900 mb-1">Catalog Currently Empty</p>
+                <p className="text-sm text-brand-500">No cashew harvests or grades are currently available.</p>
               </div>
             )
             : products.map((p) => (

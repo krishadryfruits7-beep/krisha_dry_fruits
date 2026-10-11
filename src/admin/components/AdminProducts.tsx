@@ -58,7 +58,7 @@ function emptyProduct() {
 }
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState<any[]>(PRODUCTS as any[]);
+  const [products, setProducts] = useState<any[]>(() => getStoredProducts());
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editProduct, setEditProduct] = useState<any | null>(null);
@@ -79,17 +79,15 @@ export default function AdminProducts() {
     setLoading(true);
     adminApi.products.list()
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const synced = syncWithServerProducts(data as any);
           setProducts(synced);
         } else {
-          const local = getStoredProducts();
-          if (local && local.length > 0) setProducts(local);
+          setProducts(getStoredProducts());
         }
       })
       .catch(() => {
-        const local = getStoredProducts();
-        if (local && local.length > 0) setProducts(local);
+        setProducts(getStoredProducts());
       })
       .finally(() => setLoading(false));
   };
@@ -99,9 +97,9 @@ export default function AdminProducts() {
     try {
       const data = await adminApi.products.list();
       if (Array.isArray(data)) {
-        saveStoredProducts(data as any);
-        setProducts(data as any);
-        alert(`Successfully synced ${data.length} products directly from MongoDB Atlas (krisha_dry_fruits)!`);
+        const synced = syncWithServerProducts(data as any);
+        setProducts(synced);
+        alert(`Successfully synced ${synced.length} products directly from MongoDB Atlas (krisha_dry_fruits)!`);
       }
     } catch (err: any) {
       alert(`MongoDB Atlas sync failed: ${err.message}`);
@@ -1282,14 +1280,28 @@ export default function AdminProducts() {
 
           {filteredAdminProducts.length === 0 && (
             <div className="col-span-full card p-12 text-center bg-white border border-brand-200 shadow-luxury">
-              <p className="font-serif text-lg font-bold text-brand-950 mb-2">No matching products found</p>
-              <p className="text-xs text-brand-500 mb-6">Try clearing your search or filters, or add a new grade product.</p>
-              <button onClick={() => { setFilterGrade('ALL'); setFilterOrigin('ALL'); setAdminSearch(''); }} className="btn-primary py-2 px-5 text-xs mr-2">
-                Reset Filters
+              <Database className="w-10 h-10 text-brand-400 mx-auto mb-3" />
+              <p className="font-serif text-lg font-bold text-brand-950 mb-2">
+                {products.length === 0 ? 'Database Catalog is Empty' : 'No matching products found'}
+              </p>
+              <p className="text-xs text-brand-500 mb-6 max-w-md mx-auto">
+                {products.length === 0
+                  ? 'Your MongoDB database currently has 0 products. You can create custom grades anytime or populate defaults.'
+                  : 'Try clearing your search or filters, or add a new grade product.'}
+              </p>
+              {products.length > 0 && (
+                <button onClick={() => { setFilterGrade('ALL'); setFilterOrigin('ALL'); setAdminSearch(''); }} className="btn-primary py-2 px-5 text-xs mr-2">
+                  Reset Filters
+                </button>
+              )}
+              <button onClick={openAdd} className="btn-primary py-2 px-5 text-xs mr-2">
+                Add Grade / Product
               </button>
-              <button onClick={openAdd} className="btn-outline py-2 px-5 text-xs">
-                Add New Grade Product
-              </button>
+              {products.length === 0 && (
+                <button onClick={handleSeed} disabled={seeding} className="btn-outline py-2 px-5 text-xs">
+                  {seeding ? 'Seeding...' : 'Seed Defaults'}
+                </button>
+              )}
             </div>
           )}
         </div>
