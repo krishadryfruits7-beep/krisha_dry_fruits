@@ -27,6 +27,7 @@ export interface HeroContent {
 
 export interface ContactInfo {
   phone: string;
+  extraPhone?: string;
   email: string;
   shopName: string;
   address: string;
@@ -104,6 +105,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   ],
   contact: {
     phone: '+91 98765 43210',
+    extraPhone: '+91 91234 56789',
     email: 'care@krishadryfruits.in',
     shopName: 'Krisha Dry Fruits Flagship Store & Outlet',
     address: '123 Plantation Road, Near Old Market, Margao, Goa 403601, India',

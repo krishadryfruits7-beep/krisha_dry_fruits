@@ -22,7 +22,7 @@ export const handler: Handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify(product) };
     }
 
-    const products = await Product.find({ active: true }).lean();
+    const products = await Product.find({ active: true }).sort({ priority: -1, createdAt: -1, _id: -1 }).lean();
     return { statusCode: 200, headers, body: JSON.stringify(products) };
   } catch (err: any) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };

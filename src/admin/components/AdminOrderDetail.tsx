@@ -16,7 +16,7 @@ import {
   Mail,
   MessageCircle,
 } from 'lucide-react';
-import { adminApi } from '@/api';
+import { adminApi, api } from '@/api';
 import { formatPrice } from '@/data';
 import { getCustomerOrders, updateCustomerOrderStatus } from '@/orders-storage';
 
@@ -57,12 +57,24 @@ export default function AdminOrderDetail({ orderId, onBack }: { orderId: string;
     setLoading(true);
     adminApi.orders.get(orderId)
       .then((o) => {
+        if (!o) throw new Error('Not found');
         setOrder(o);
         setStatus(o.status || 'pending');
         setTracking(o.trackingNumber || '');
         setNotes(o.notes || '');
       })
-      .catch(() => {
+      .catch(async () => {
+        try {
+          const publicOrder = await api.orders.get(orderId);
+          if (publicOrder && !publicOrder.error) {
+            setOrder(publicOrder);
+            setStatus(publicOrder.status || 'pending');
+            setTracking(publicOrder.trackingNumber || '');
+            setNotes(publicOrder.notes || '');
+            return;
+          }
+        } catch { /* proceed to local */ }
+
         const local = getCustomerOrders().find(
           (o: any) => o.orderId === orderId || o._id === orderId || o.id === orderId
         );

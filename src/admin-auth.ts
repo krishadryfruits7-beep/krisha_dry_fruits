@@ -1,39 +1,56 @@
 import { useState, useEffect } from 'react';
 
-export const PERMANENT_ADMIN_EMAIL = (import.meta.env.VITE_ADMIN_EMAIL as string) || '';
+export const DEFAULT_PERMANENT_ADMIN_EMAILS = [
+  'sanjayparihar0625@gmail.com',
+  'krishadryfruits7@gmail.com',
+  ...(import.meta.env.VITE_ADMIN_EMAIL ? [import.meta.env.VITE_ADMIN_EMAIL as string] : []),
+];
 
-const ADMIN_STORAGE_KEY = 'kdf_admin_whitelist_v1';
+export const PERMANENT_ADMIN_EMAIL = DEFAULT_PERMANENT_ADMIN_EMAILS[0];
+
+const ADMIN_STORAGE_KEY = 'kdf_admin_whitelist_v2';
 const ADMIN_EVENT = 'kdf_admin_whitelist_change';
 
 export function getAdminWhitelist(): string[] {
-  if (typeof window === 'undefined') return PERMANENT_ADMIN_EMAIL ? [PERMANENT_ADMIN_EMAIL.toLowerCase()] : [];
+  const permanent = Array.from(
+    new Set(DEFAULT_PERMANENT_ADMIN_EMAILS.map((e) => e.trim().toLowerCase()).filter(Boolean))
+  );
+
+  if (typeof window === 'undefined') return permanent;
+
   try {
     const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
     if (!raw) {
-      return PERMANENT_ADMIN_EMAIL ? [PERMANENT_ADMIN_EMAIL.toLowerCase()] : [];
+      localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(permanent));
+      return permanent;
     }
     const list: string[] = JSON.parse(raw);
     const normalized = list.map((e) => e.trim().toLowerCase()).filter(Boolean);
-    if (PERMANENT_ADMIN_EMAIL && !normalized.includes(PERMANENT_ADMIN_EMAIL.toLowerCase())) {
-      normalized.unshift(PERMANENT_ADMIN_EMAIL.toLowerCase());
-    }
-    return Array.from(new Set(normalized));
+    
+    // Ensure all permanent admin emails are always included
+    permanent.forEach((p) => {
+      if (!normalized.includes(p)) {
+        normalized.unshift(p);
+      }
+    });
+
+    const unique = Array.from(new Set(normalized));
+    return unique;
   } catch {
-    return PERMANENT_ADMIN_EMAIL ? [PERMANENT_ADMIN_EMAIL.toLowerCase()] : [];
+    return permanent;
   }
 }
 
 export function isPermanentAdmin(email?: string | null): boolean {
-  if (!email || !PERMANENT_ADMIN_EMAIL) return false;
-  return email.trim().toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase();
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return DEFAULT_PERMANENT_ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(clean);
 }
 
 export function isAdminAuthorized(email?: string | null): boolean {
   if (!email) return false;
   const cleanEmail = email.trim().toLowerCase();
   const list = getAdminWhitelist();
-  // If no whitelist is defined yet, allow the administrator
-  if (list.length === 0) return true;
   return list.includes(cleanEmail);
 }
 
@@ -54,6 +71,9 @@ export function addAdminEmail(email: string): { success: boolean; message: strin
 
 export function removeAdminEmail(email: string): { success: boolean; message: string } {
   const clean = email.trim().toLowerCase();
+  if (isPermanentAdmin(clean)) {
+    return { success: false, message: 'Cannot revoke access for a permanent root administrator.' };
+  }
   const current = getAdminWhitelist();
   const updated = current.filter((e) => e !== clean);
   localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(updated));
@@ -85,6 +105,6 @@ export function useAdminWhitelist() {
     emails,
     addAdmin: addAdminEmail,
     removeAdmin: removeAdminEmail,
-    permanentAdmin: PERMANENT_ADMIN_EMAIL,
+    permanentAdmins: DEFAULT_PERMANENT_ADMIN_EMAILS,
   };
 }

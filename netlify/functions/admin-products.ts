@@ -54,18 +54,32 @@ export const handler: Handler = async (event) => {
     }
 
     if (method === 'GET') {
-      const products = await Product.find().lean();
+      const products = await Product.find().sort({ priority: -1, createdAt: -1, _id: -1 }).lean();
       return { statusCode: 200, headers, body: JSON.stringify(products) };
     }
 
     if (method === 'POST') {
       const body = JSON.parse(event.body || '{}');
+      if (Array.isArray(body.types)) {
+        body.types = body.types.map((t: any) => ({
+          ...t,
+          description: t.description || `Fresh premium ${t.type || 'cashew'} kernels`,
+          image: t.image || body.image || '/cashew_single_nut.jpg',
+        }));
+      }
       const product = await Product.create(body);
       return { statusCode: 201, headers, body: JSON.stringify(product) };
     }
 
     if (method === 'PUT' && id) {
       const body = JSON.parse(event.body || '{}');
+      if (Array.isArray(body.types)) {
+        body.types = body.types.map((t: any) => ({
+          ...t,
+          description: t.description || `Fresh premium ${t.type || 'cashew'} kernels`,
+          image: t.image || body.image || '/cashew_single_nut.jpg',
+        }));
+      }
       const product = await Product.findByIdAndUpdate(id, body, { new: true });
       return { statusCode: 200, headers, body: JSON.stringify(product) };
     }

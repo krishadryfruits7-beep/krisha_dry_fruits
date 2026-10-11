@@ -227,14 +227,14 @@ export default function GradeSelectorSection({
             <button
               key={item.grade}
               onClick={() => onSelectGrade(item.grade)}
-              className="flex-shrink-0 w-[136px] sm:w-[155px] md:w-[175px] lg:w-[195px] snap-start flex flex-col items-center justify-between p-4 sm:p-5 rounded-3xl bg-white border border-brand-200/80 shadow-luxury hover:shadow-luxury-lg hover:-translate-y-1.5 hover:border-brand-500 transition-all duration-300 text-center group cursor-pointer"
+              className="flex-shrink-0 w-[148px] sm:w-[172px] md:w-[195px] lg:w-[215px] snap-start flex flex-col items-center justify-between p-4 sm:p-5 rounded-3xl bg-white border border-brand-200/80 shadow-luxury hover:shadow-luxury-lg hover:-translate-y-1.5 hover:border-brand-500 transition-all duration-300 text-center group cursor-pointer"
             >
-              {/* Single Cashew Visual in soft luxury tile */}
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#FBF7EE] border border-brand-200/60 flex items-center justify-center mb-3 shadow-inner group-hover:scale-105 transition-transform duration-300">
+              {/* Single Cashew Visual in luxurious prominent tile */}
+              <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-gradient-to-b from-[#FDFBF7] to-[#F5ECE0] border border-brand-200/70 flex items-center justify-center mb-3 shadow-inner group-hover:scale-105 transition-transform duration-300 p-2">
                 <img
                   src={item.image || '/cashew_single_nut.jpg'}
                   alt={`${item.grade} cashew nut`}
-                  className={`w-12 h-12 sm:w-16 sm:h-16 object-contain ${item.scale} transition-transform duration-300 group-hover:scale-110 drop-shadow-sm`}
+                  className={`w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 object-contain ${item.scale} transition-transform duration-300 group-hover:scale-110 drop-shadow-md`}
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src = '/cashew_single_nut.jpg';
                   }}
@@ -242,7 +242,7 @@ export default function GradeSelectorSection({
               </div>
 
               {/* Grade Code */}
-              <div className="font-serif text-lg sm:text-xl font-bold text-brand-950 group-hover:text-brand-700 transition-colors">
+              <div className="font-serif text-lg sm:text-2xl font-bold text-brand-950 group-hover:text-brand-700 transition-colors">
                 {item.grade}
               </div>
 
@@ -290,11 +290,11 @@ export default function GradeSelectorSection({
             onClick={handleBannerClick}
             className="relative rounded-3xl overflow-hidden cursor-pointer group shadow-luxury border border-brand-200/70 select-none transition-all"
           >
-            <div className="relative min-h-[280px] sm:min-h-0 sm:h-56 md:h-60 lg:h-68 overflow-hidden">
+            <div className="relative min-h-[290px] sm:min-h-0 sm:h-60 md:h-64 lg:h-72 overflow-hidden">
               <img
                 src={currentBanner.image || '/hero_cashew_bowl.jpg'}
                 alt={currentBanner.title}
-                className="w-full h-full object-cover object-[center_40%] transition-transform duration-700 group-hover:scale-105 filter brightness-[0.88]"
+                className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105 filter brightness-[0.90]"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).src = '/hero_cashew_bowl.jpg';
                 }}

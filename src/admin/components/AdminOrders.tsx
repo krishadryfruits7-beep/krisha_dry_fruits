@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Filter, ChevronLeft, ChevronRight, X, Eye, MapPin, ExternalLink } from 'lucide-react';
+import { Search, Filter, ChevronLeft, ChevronRight, X, Eye, MapPin, ExternalLink, Phone } from 'lucide-react';
 import { adminApi } from '@/api';
 import { formatPrice } from '@/data';
 import { getCustomerOrders } from '@/orders-storage';
@@ -186,9 +186,116 @@ export default function AdminOrders({ onViewOrder }: { onViewOrder: (id: string)
         </div>
       </div>
 
-      {/* Orders Table Card */}
+      {/* Orders List Container: Mobile Cards (sm:hidden) + Desktop Table (hidden sm:block) */}
       <div className="card overflow-hidden border border-brand-200/70 bg-white shadow-luxury">
-        <div className="overflow-x-auto">
+        
+        {/* Mobile View: Clean Structured Cards */}
+        <div className="sm:hidden divide-y divide-brand-100">
+          {loading ? (
+            <div className="p-4 space-y-3 animate-pulse">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-28 bg-cream-200/60 rounded-2xl" />
+              ))}
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="p-8 text-center text-xs text-brand-500 font-medium">
+              No orders match your filter criteria.
+            </div>
+          ) : (
+            orders.map((order) => {
+              const badge = STATUS_COLORS[order.status] || STATUS_COLORS.pending;
+              const c = order.customer || {};
+              const hasCoords = typeof c.lat === 'number' && typeof c.lng === 'number' && !isNaN(c.lat) && !isNaN(c.lng);
+              const gMapsQuery = hasCoords
+                ? `${c.lat},${c.lng}`
+                : `${c.doorNo ? c.doorNo + ' ' : ''}${c.address || ''} ${c.city || ''} ${c.state || ''} ${c.pincode || ''} India`;
+
+              return (
+                <div
+                  key={order.orderId || order._id}
+                  onClick={() => onViewOrder(order.orderId || order._id)}
+                  className="p-4 hover:bg-cream-50/60 active:bg-cream-100/60 transition-colors space-y-3 cursor-pointer"
+                >
+                  {/* Top Bar: Order ID + Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-bold text-brand-950 bg-brand-100/90 px-2.5 py-1 rounded-lg">
+                      #{order.orderId}
+                    </span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold capitalize border ${badge.bg} ${badge.text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                      <span>{order.status || 'pending'}</span>
+                    </span>
+                  </div>
+
+                  {/* Customer Information */}
+                  <div>
+                    <div className="font-bold text-brand-950 text-sm">
+                      {order.customer?.fullName || 'Anonymous Customer'}
+                    </div>
+                    {order.customer?.phone && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <a
+                          href={`tel:${order.customer.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-xs text-forest-700 hover:text-forest-900 font-semibold bg-forest-50 border border-forest-200 px-2 py-0.5 rounded-md"
+                        >
+                          <Phone className="w-3 h-3 text-forest-600" />
+                          <span>{order.customer.phone}</span>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delivery Location & Google Maps */}
+                  <div className="p-2.5 rounded-xl bg-cream-50/80 border border-brand-200/50 text-xs text-brand-700 space-y-1.5">
+                    <div className="text-[11px] leading-relaxed line-clamp-2">
+                      {c.doorNo ? `${c.doorNo}, ` : ''}{c.address ? `${c.address}, ` : ''}{c.city || 'India'}{c.pincode ? ` (${c.pincode})` : ''}
+                    </div>
+                    <div className="flex items-center gap-2 pt-1 border-t border-brand-100/80">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(gMapsQuery)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-forest-800 hover:text-forest-950"
+                      >
+                        <MapPin className="w-3 h-3 text-forest-600" />
+                        <span>{hasCoords ? 'Verified GPS Pin' : 'View on Google Maps'}</span>
+                        <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row: Item count, Price, and Action */}
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <div className="text-[11px] text-brand-500 font-medium">
+                        {order.items?.length || 0} {(order.items?.length === 1 ? 'pack' : 'packs')} • {new Date(order.createdAt || order.placedAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </div>
+                      <div className="text-base font-bold text-brand-950 font-serif">
+                        {formatPrice(order.total)}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewOrder(order.orderId || order._id);
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-brand-800 hover:bg-brand-900 text-cream-50 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Manage</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop / Tablet View: Full Table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="bg-cream-100/60 text-xs font-bold text-brand-600 uppercase tracking-wider border-b border-brand-100">

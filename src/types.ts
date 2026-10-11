@@ -40,6 +40,7 @@ export interface Product {
   reviewCount: number;
   badge: string;
   active?: boolean;
+  priority?: number;
   types: GradeType[];
 }
 

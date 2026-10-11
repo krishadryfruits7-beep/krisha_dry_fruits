@@ -74,13 +74,23 @@ export default function Contact() {
               <Phone className="w-5 h-5" />
             </div>
             <h3 className="font-serif text-base font-semibold text-brand-900 mb-1">Customer Helpline</h3>
-            <a
-              href={`tel:${contact.phone}`}
-              className="text-sm font-semibold text-brand-900 hover:text-brand-600 transition-colors block"
-            >
-              {contact.phone}
-            </a>
-            <div className="flex items-center gap-1.5 text-xs text-brand-500 mt-1.5">
+            <div className="space-y-1">
+              <a
+                href={`tel:${contact.phone}`}
+                className="text-sm font-semibold text-brand-900 hover:text-brand-600 transition-colors block"
+              >
+                {contact.phone}
+              </a>
+              {contact.extraPhone && (
+                <a
+                  href={`tel:${contact.extraPhone}`}
+                  className="text-xs font-semibold text-forest-700 hover:text-forest-900 transition-colors block"
+                >
+                  Alt: {contact.extraPhone}
+                </a>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-brand-500 mt-2">
               <Clock className="w-3.5 h-3.5 text-brand-400" />
               <span>{contact.hours}</span>
             </div>

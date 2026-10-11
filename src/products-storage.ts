@@ -34,28 +34,33 @@ export function saveStoredProducts(list: Product[]): void {
 }
 
 /**
- * Merges server products into local storage without wiping out locally created or updated products.
+ * Synchronizes server products from MongoDB Atlas into local storage, ensuring newest items are always on top.
  */
 export function syncWithServerProducts(serverList: Product[]): Product[] {
   if (!Array.isArray(serverList) || serverList.length === 0) return getStoredProducts();
-  const local = getStoredProducts();
-  const map = new Map<string, Product>();
 
-  // 1. Put server products
-  serverList.forEach((p) => {
-    const key = (p._id || p.id || `${p.grade}-${p.name}`).toLowerCase();
-    map.set(key, { ...p, active: p.active !== false });
+  const formattedServerList: Product[] = serverList.map((p) => ({
+    ...p,
+    id: p._id || p.id,
+    active: p.active !== false,
+    priority: typeof p.priority === 'number' ? p.priority : 0,
+  }));
+
+  // Sort so highest priority is on top, then newly added items (latest createdAt or ObjectId)
+  formattedServerList.sort((a: any, b: any) => {
+    const pa = typeof a.priority === 'number' ? a.priority : 0;
+    const pb = typeof b.priority === 'number' ? b.priority : 0;
+    if (pa !== pb) return pb - pa;
+    const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (da && db && da !== db) return db - da;
+    const ida = String(a._id || a.id || '');
+    const idb = String(b._id || b.id || '');
+    return idb.localeCompare(ida);
   });
 
-  // 2. Overlay local products (so locally created/edited ones always take priority!)
-  local.forEach((p) => {
-    const key = (p._id || p.id || `${p.grade}-${p.name}`).toLowerCase();
-    map.set(key, { ...p, active: p.active !== false });
-  });
-
-  const merged = Array.from(map.values());
-  saveStoredProducts(merged);
-  return merged;
+  saveStoredProducts(formattedServerList);
+  return formattedServerList;
 }
 
 export function addStoredProduct(productData: any): Product {
@@ -80,7 +85,9 @@ export function addStoredProduct(productData: any): Product {
     reviewCount: productData.reviewCount || 120,
     badge: productData.badge || 'Premium',
     active: productData.active !== false,
+    priority: typeof productData.priority === 'number' ? productData.priority : 0,
     types: productData.types || [],
+    createdAt: productData.createdAt || new Date().toISOString(),
   };
 
   const updated = [newProduct, ...current.filter((p) => p.id !== id && p._id !== newProduct._id)];

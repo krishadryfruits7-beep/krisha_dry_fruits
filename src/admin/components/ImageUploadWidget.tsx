@@ -102,6 +102,7 @@ export default function ImageUploadWidget({
                 alt="Preview"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onError={(e) => {
+                  e.currentTarget.onerror = null;
                   (e.currentTarget as HTMLImageElement).src = '/hero_cashew_bowl.jpg';
                 }}
               />

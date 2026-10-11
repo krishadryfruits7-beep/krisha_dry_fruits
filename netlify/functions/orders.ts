@@ -1,4 +1,5 @@
 import type { Handler } from '@netlify/functions';
+import mongoose from 'mongoose';
 import { connectDB } from '../../src/lib/mongodb';
 import Order from '../../src/lib/models/Order';
 
@@ -22,9 +23,27 @@ export const handler: Handler = async (event) => {
     }
 
     if (event.httpMethod === 'GET') {
-      const orderId = event.queryStringParameters?.orderId;
-      if (!orderId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'orderId required' }) };
-      const order = await Order.findOne({ orderId }).lean();
+      const email = event.queryStringParameters?.email || event.queryStringParameters?.search;
+      if (email && email.trim()) {
+        const cleanEmail = email.trim();
+        const orders = await Order.find({
+          $or: [
+            { 'customer.email': { $regex: cleanEmail, $options: 'i' } },
+            { orderId: { $regex: cleanEmail, $options: 'i' } },
+          ],
+        })
+          .sort({ createdAt: -1 })
+          .limit(50)
+          .lean();
+        return { statusCode: 200, headers, body: JSON.stringify({ orders }) };
+      }
+
+      const orderId = event.queryStringParameters?.orderId || event.queryStringParameters?.id;
+      if (!orderId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'orderId or email required' }) };
+      let order = await Order.findOne({ orderId }).lean();
+      if (!order && mongoose.Types.ObjectId.isValid(orderId)) {
+        order = await Order.findById(orderId).lean();
+      }
       if (!order) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
       return { statusCode: 200, headers, body: JSON.stringify(order) };
     }

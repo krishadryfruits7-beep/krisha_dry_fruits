@@ -10,7 +10,7 @@ import {
   Users,
   KeyRound,
 } from 'lucide-react';
-import { useAdminWhitelist, PERMANENT_ADMIN_EMAIL } from '@/admin-auth';
+import { useAdminWhitelist, isPermanentAdmin } from '@/admin-auth';
 
 export default function AdminAdmins() {
   const { emails, addAdmin, removeAdmin } = useAdminWhitelist();
@@ -49,7 +49,7 @@ export default function AdminAdmins() {
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-brand-600 mt-1 max-w-2xl">
-            Authorize team members to access the Krisha Admin Console via Google Sign-In. Non-whitelisted accounts will be denied entry automatically.
+            Authorize executive team members to access the Krisha Admin Console via Google Sign-In. Non-whitelisted accounts will be denied entry automatically.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export default function AdminAdmins() {
           </div>
 
           <p className="text-xs text-brand-600 leading-relaxed">
-            Enter the Google email address of the person you wish to authorize. They will immediately be able to log in using their Google account.
+            Enter the Google email address of the team member you wish to authorize. They can immediately log in using their Google account.
           </p>
 
           <form onSubmit={handleAdd} className="space-y-3 pt-2">
@@ -100,7 +100,7 @@ export default function AdminAdmins() {
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="e.g. colleague@gmail.com"
+                  placeholder="e.g. manager@gmail.com"
                   className="input-field pl-10 text-xs sm:text-sm"
                   required
                 />
@@ -120,11 +120,11 @@ export default function AdminAdmins() {
           <div className="p-4 rounded-2xl bg-cream-100/70 border border-brand-200 text-xs text-brand-700 space-y-1.5 mt-4">
             <div className="font-bold flex items-center gap-1.5 text-brand-900">
               <Lock className="w-3.5 h-3.5 text-brand-600" />
-              <span>Access Rules:</span>
+              <span>Security Access Rules:</span>
             </div>
-            <p>• Only Google OAuth logins with whitelisted emails can access admin.</p>
-            <p>• Sanjay Parihar is set as the permanent root administrator.</p>
-            <p>• You can revoke access for any other administrator at any time.</p>
+            <p>• Only authorized team Google accounts can log into the executive console.</p>
+            <p>• Primary root super-admin accounts have permanent protected access.</p>
+            <p>• You can authorize or revoke access for additional team members at any time.</p>
           </div>
         </div>
 
@@ -144,7 +144,7 @@ export default function AdminAdmins() {
 
           <div className="space-y-3">
             {emails.map((email) => {
-              const isPermanent = Boolean(PERMANENT_ADMIN_EMAIL && email.toLowerCase() === PERMANENT_ADMIN_EMAIL.toLowerCase());
+              const isPermanent = isPermanentAdmin(email);
               return (
                 <div
                   key={email}

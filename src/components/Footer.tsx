@@ -17,17 +17,21 @@ export default function Footer({ onNavigate }: FooterProps) {
 
           {/* Brand Column */}
           <div className="space-y-4">
-            <div className="flex flex-col items-start">
-              <div className="flex items-center gap-1.5">
-                <span className="font-serif text-2xl font-bold tracking-tight text-cream-50">Krisha</span>
-                <svg className="w-4 h-4 text-forest-400 -mt-2 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 2C8 6 6 10 7 14c1 4 4 6 7 6s6-3 6-7c0-4-3-8-8-11z" opacity="0.85" />
-                </svg>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-white ring-2 ring-brand-400/80 shadow-md flex items-center justify-center p-0.5 shrink-0">
+                <img
+                  src="/Krisha_Dry_Fruits_logo.png"
+                  alt="Krisha Dry Fruits"
+                  className="w-full h-full object-cover rounded-full"
+                />
               </div>
-              <div className="flex items-center gap-2 -mt-1 text-[9px] uppercase tracking-[0.28em] font-semibold text-brand-300">
-                <span className="h-px w-3 bg-brand-600"></span>
-                <span>Dry Fruits</span>
-                <span className="h-px w-3 bg-brand-600"></span>
+              <div className="flex flex-col">
+                <span className="font-serif text-lg font-bold text-cream-100 tracking-tight leading-none">
+                  Krisha Dry Fruits
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-cream-400 mt-1">
+                  Artisanal Harvests
+                </span>
               </div>
             </div>
 
@@ -174,10 +178,17 @@ export default function Footer({ onNavigate }: FooterProps) {
               </li>
 
               <li className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 shrink-0 text-brand-400" />
-                <a href={`tel:${contact.phone}`} className="hover:text-cream-50 transition-colors">
-                  {contact.phone}
-                </a>
+                <Phone className="w-4 h-4 shrink-0 text-amber-400" />
+                <div className="flex flex-col">
+                  <a href={`tel:${contact.phone}`} className="hover:text-cream-50 transition-colors font-medium">
+                    {contact.phone}
+                  </a>
+                  {contact.extraPhone && (
+                    <a href={`tel:${contact.extraPhone}`} className="hover:text-cream-50 transition-colors text-[11px] text-cream-400">
+                      Alt: {contact.extraPhone}
+                    </a>
+                  )}
+                </div>
               </li>
 
               <li className="flex items-center gap-2.5">

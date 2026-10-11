@@ -1,7 +1,7 @@
 import { ShoppingBag, Menu, X, Search, User as UserIcon, Package, MapPin, ExternalLink, LogIn, LogOut, Shield, PhoneCall } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useCart } from '@/cart-context';
-import { useUser, useClerk, SignInButton, UserButton } from '@clerk/react';
+import { useUser, useClerk, SignInButton, UserButton } from '@/auth';
 import { useSiteContent, getStoreGoogleMapsUrl } from '@/site-content';
 import { useCustomerOrders } from '@/orders-storage';
 
@@ -113,19 +113,23 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
             <div className="hidden lg:flex items-center">
               <button
                 onClick={() => onNavigate('home')}
-                className="group flex flex-col items-start text-left focus:outline-none"
+                className="group flex items-center gap-3 focus:outline-none"
+                aria-label="Krisha Dry Fruits Home"
               >
-                <div className="flex items-center gap-1.5">
-                  <span className="font-serif text-2xl font-bold tracking-tight text-brand-950">Krisha</span>
-                  <svg className="w-4 h-4 text-forest-600 -mt-2.5 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 2C8 6 6 10 7 14c1 4 4 6 7 6s6-3 6-7c0-4-3-8-8-11z" opacity="0.85" />
-                    <path d="M10 6c-2 2-3 5-2 8" stroke="#fff" strokeWidth="1" fill="none" />
-                  </svg>
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-white ring-2 ring-brand-300 shadow-sm flex items-center justify-center p-0.5 group-hover:ring-brand-500 transition-all shrink-0">
+                  <img
+                    src="/Krisha_Dry_Fruits_logo.png"
+                    alt="Krisha Dry Fruits"
+                    className="w-full h-full object-cover rounded-full"
+                  />
                 </div>
-                <div className="flex items-center gap-2 -mt-1 text-[9px] uppercase tracking-[0.28em] font-semibold text-brand-600">
-                  <span className="h-px w-3 bg-brand-300"></span>
-                  <span>Dry Fruits</span>
-                  <span className="h-px w-3 bg-brand-300"></span>
+                <div className="flex flex-col text-left">
+                  <span className="font-serif text-lg font-bold text-brand-950 tracking-tight leading-none group-hover:text-brand-800 transition-colors">
+                    Krisha
+                  </span>
+                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-brand-500 leading-none mt-1">
+                    Dry Fruits
+                  </span>
                 </div>
               </button>
             </div>
@@ -151,30 +155,30 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
             <div className="lg:hidden flex-1 flex justify-center">
               <button
                 onClick={() => onNavigate('home')}
-                className="flex flex-col items-center focus:outline-none"
+                className="flex items-center gap-2 focus:outline-none"
+                aria-label="Krisha Dry Fruits Home"
               >
-                <div className="flex items-center gap-1">
-                  <span className="font-serif text-2xl font-bold tracking-tight text-brand-950">Krisha</span>
-                  <svg className="w-3.5 h-3.5 text-forest-600 -mt-2 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 2C8 6 6 10 7 14c1 4 4 6 7 6s6-3 6-7c0-4-3-8-8-11z" opacity="0.85" />
-                  </svg>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-white ring-2 ring-brand-300 shadow-sm flex items-center justify-center p-0.5 shrink-0">
+                  <img
+                    src="/Krisha_Dry_Fruits_logo.png"
+                    alt="Krisha Dry Fruits"
+                    className="w-full h-full object-cover rounded-full"
+                  />
                 </div>
-                <div className="flex items-center gap-1.5 -mt-1 text-[8.5px] uppercase tracking-[0.25em] font-semibold text-brand-600">
-                  <span className="h-px w-2.5 bg-brand-300"></span>
-                  <span>Dry Fruits</span>
-                  <span className="h-px w-2.5 bg-brand-300"></span>
-                </div>
+                <span className="font-serif text-base font-bold text-brand-950 tracking-tight">
+                  Krisha
+                </span>
               </button>
             </div>
 
             {/* Right Action Icons: Search, Location Pin, Orders, Cart, User */}
             <div className="flex items-center gap-1 sm:gap-2">
-              {/* Direct Google Maps Icon Button */}
+              {/* Direct Google Maps Icon Button - visible on both mobile and desktop */}
               <a
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 text-brand-900 hover:text-forest-700 hover:bg-brand-100/50 rounded-full transition-colors hidden sm:flex items-center"
+                className="p-2 text-brand-900 hover:text-forest-700 hover:bg-brand-100/50 rounded-full transition-colors flex items-center shrink-0"
                 title="Open Shop in Google Maps"
                 aria-label="Open Shop in Google Maps"
               >
@@ -337,16 +341,15 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
                           </p>
                         </div>
 
-                        {/* Sign In Button with Fallback */}
+                        {/* Sign In Button */}
                         <button
                           onClick={() => {
                             setAccountMenuOpen(false);
                             try {
                               clerk?.openSignIn?.({ fallbackRedirectUrl: window.location.href });
                             } catch {
-                              // If Clerk SDK popup fails, trigger standard SignInButton
-                              const btn = document.getElementById('clerk-fallback-signin-btn');
-                              if (btn) btn.click();
+                              // If Clerk SDK popup fails, fallback
+                              console.warn('Failed to open Clerk Sign In');
                             }
                           }}
                           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-brand-700 hover:bg-brand-800 text-cream-50 text-xs font-bold transition-colors shadow-xs"
@@ -354,13 +357,6 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
                           <LogIn className="w-4 h-4" />
                           <span>Sign In / Register</span>
                         </button>
-
-                        {/* Hidden Clerk standard button as fallback anchor */}
-                        <div className="hidden">
-                          <SignInButton mode="modal">
-                            <button id="clerk-fallback-signin-btn">Hidden Sign In</button>
-                          </SignInButton>
-                        </div>
 
                         {/* Guest Quick Links */}
                         <div className="mt-2 space-y-1">
@@ -394,21 +390,6 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
                           </button>
                         </div>
 
-                        <div className="my-2 border-t border-brand-100" />
-
-                        {/* Admin link */}
-                        <div className="px-2 pt-0.5 flex items-center justify-between text-[11px] text-brand-500">
-                          <span>Store owner?</span>
-                          <a
-                            href="/admin"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-bold text-brand-700 hover:text-brand-900 underline flex items-center gap-1"
-                          >
-                            <Shield className="w-3 h-3" />
-                            <span>Admin Portal</span>
-                          </a>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -523,11 +504,15 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
                 </button>
 
                 {!isSignedIn && (
-                  <SignInButton mode="modal">
-                    <button className="btn-primary w-full py-2.5 text-sm">
-                      Sign In / Register
-                    </button>
-                  </SignInButton>
+                  <button
+                    onClick={() => {
+                      setMobileOpen(false);
+                      clerk?.openSignIn?.({ fallbackRedirectUrl: window.location.href });
+                    }}
+                    className="btn-primary w-full py-2.5 text-sm"
+                  >
+                    Sign In / Register
+                  </button>
                 )}
 
                 <div className="px-3 pt-3 text-[11px] text-brand-600/80 leading-relaxed">

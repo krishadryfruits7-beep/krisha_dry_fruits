@@ -24,12 +24,16 @@ export default function AdminLayout({ page, onNavigate, onLogout, children, user
     <aside className="flex flex-col h-full bg-[#180e08] text-cream-100 w-64 border-r border-brand-900/60 shadow-2xl">
       {/* Brand Header */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-brand-900/60">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center shrink-0 shadow-md shadow-brand-950/40">
-          <span className="font-serif text-lg font-bold text-cream-50">K</span>
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-white ring-2 ring-brand-400/80 shadow-md flex items-center justify-center p-0.5 shrink-0">
+          <img
+            src="/Krisha_Dry_Fruits_logo.png"
+            alt="Krisha Dry Fruits"
+            className="w-full h-full object-cover rounded-full"
+          />
         </div>
         <div>
-          <div className="font-serif text-base font-bold text-cream-50 tracking-tight">Krisha Console</div>
-          <div className="text-[9px] tracking-[0.22em] uppercase font-semibold text-brand-400">HQ Management</div>
+          <div className="font-serif text-sm font-bold text-cream-50 tracking-tight leading-tight">Krisha Console</div>
+          <div className="text-[9px] tracking-[0.2em] uppercase font-semibold text-brand-400">HQ Management</div>
         </div>
       </div>
 
@@ -113,7 +117,7 @@ export default function AdminLayout({ page, onNavigate, onLogout, children, user
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen w-full min-w-0 overflow-x-hidden">
         {/* Top Sticky Bar */}
         <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-brand-200/60 px-4 sm:px-8 h-16 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
@@ -141,7 +145,7 @@ export default function AdminLayout({ page, onNavigate, onLogout, children, user
         </header>
 
         {/* Dynamic View Container */}
-        <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-8 max-w-7xl w-full min-w-0 mx-auto">
           {children}
         </main>
       </div>

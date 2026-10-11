@@ -39,6 +39,7 @@ function emptyProduct() {
     gallery: ['', '', '', ''] as string[],
     badge: 'Premium',
     active: true,
+    priority: 0,
     types: ALL_TYPES.map((t, idx) => {
       const base = makeType(t);
       if (idx === 0) {
@@ -123,6 +124,7 @@ export default function AdminProducts() {
     });
     setForm({
       ...p,
+      priority: typeof p.priority === 'number' ? p.priority : 0,
       gallery: [...(p.gallery || []), '', '', '', ''].slice(0, 4),
       types: mergedTypes,
     });
@@ -142,6 +144,7 @@ export default function AdminProducts() {
       _id: undefined,
       id: undefined,
       name: `${p.name} (New Stock)`,
+      priority: typeof p.priority === 'number' ? p.priority : 0,
       gallery: [...(p.gallery || []), '', '', '', ''].slice(0, 4),
       types: mergedTypes,
     });
@@ -211,6 +214,72 @@ export default function AdminProducts() {
       console.warn('Backend toggle active failed, updated in local storage:', apiErr);
     }
     load();
+  };
+
+  const handleMoveProductUp = async (p: any, index: number) => {
+    if (index <= 0) return;
+    const above = filteredAdminProducts[index - 1];
+    if (!above) return;
+
+    const abovePriority = typeof above.priority === 'number' ? above.priority : 0;
+    const currentPriority = typeof p.priority === 'number' ? p.priority : 0;
+    const newPriority = Math.max(abovePriority + 1, currentPriority + 1);
+
+    const targetId = p._id || p.id;
+    updateStoredProduct(targetId, { priority: newPriority });
+
+    setProducts((prev) => {
+      const copy = prev.map((item) => ((item._id === targetId || item.id === targetId) ? { ...item, priority: newPriority } : item));
+      return syncWithServerProducts(copy);
+    });
+
+    try {
+      await adminApi.products.update(targetId, { priority: newPriority });
+    } catch (apiErr) {
+      console.warn('Backend priority update failed:', apiErr);
+    }
+  };
+
+  const handleMoveProductDown = async (p: any, index: number) => {
+    if (index >= filteredAdminProducts.length - 1) return;
+    const below = filteredAdminProducts[index + 1];
+    if (!below) return;
+
+    const belowPriority = typeof below.priority === 'number' ? below.priority : 0;
+    const currentPriority = typeof p.priority === 'number' ? p.priority : 0;
+    const newPriority = Math.min(belowPriority - 1, currentPriority - 1);
+
+    const targetId = p._id || p.id;
+    updateStoredProduct(targetId, { priority: newPriority });
+
+    setProducts((prev) => {
+      const copy = prev.map((item) => ((item._id === targetId || item.id === targetId) ? { ...item, priority: newPriority } : item));
+      return syncWithServerProducts(copy);
+    });
+
+    try {
+      await adminApi.products.update(targetId, { priority: newPriority });
+    } catch (apiErr) {
+      console.warn('Backend priority update failed:', apiErr);
+    }
+  };
+
+  const handlePinProductToTop = async (p: any) => {
+    const maxPriority = Math.max(0, ...products.map((item) => (typeof item.priority === 'number' ? item.priority : 0)));
+    const newPriority = maxPriority + 10;
+    const targetId = p._id || p.id;
+
+    updateStoredProduct(targetId, { priority: newPriority });
+    setProducts((prev) => {
+      const copy = prev.map((item) => ((item._id === targetId || item.id === targetId) ? { ...item, priority: newPriority } : item));
+      return syncWithServerProducts(copy);
+    });
+
+    try {
+      await adminApi.products.update(targetId, { priority: newPriority });
+    } catch (apiErr) {
+      console.warn('Backend priority pin failed:', apiErr);
+    }
   };
 
   const autoFillGradeDetails = (gradeCode: string) => {
@@ -353,8 +422,13 @@ export default function AdminProducts() {
       const payload = {
         ...form,
         grade: cleanGrade,
+        priority: typeof form.priority === 'number' ? form.priority : 0,
         gallery: form.gallery.filter(Boolean),
-        types: enabledTypes.map(({ enabled: _, ...t }: any) => t),
+        types: enabledTypes.map(({ enabled: _, ...t }: any) => ({
+          ...t,
+          description: t.description || `Fresh premium ${t.type || 'cashew'} kernels`,
+          image: t.image || form.image || '/cashew_single_nut.jpg',
+        })),
       };
 
       if (editProduct) {
@@ -362,18 +436,22 @@ export default function AdminProducts() {
         updateStoredProduct(targetId, payload);
         try {
           await adminApi.products.update(targetId, payload);
-        } catch (apiErr) {
-          console.warn('Backend update failed, saved to local storage:', apiErr);
+          alert(`Product "${payload.name}" updated successfully in database!`);
+        } catch (apiErr: any) {
+          console.error('Backend update failed:', apiErr);
+          alert(`Notice: Saved to local catalogue, but MongoDB sync error: ${apiErr.message}`);
         }
       } else {
-        let savedPayload = payload;
+        let savedPayload = { ...payload, createdAt: new Date().toISOString() };
         try {
-          const res = await adminApi.products.create(payload);
+          const res = await adminApi.products.create(savedPayload);
           if (res && (res._id || res.id)) {
-            savedPayload = { ...payload, _id: res._id, id: res._id };
+            savedPayload = { ...savedPayload, _id: res._id, id: res._id, createdAt: res.createdAt || savedPayload.createdAt };
           }
-        } catch (apiErr) {
-          console.warn('Backend create failed, saved to local storage:', apiErr);
+          alert(`Product "${savedPayload.name}" successfully added to MongoDB Atlas database!`);
+        } catch (apiErr: any) {
+          console.error('Backend create failed:', apiErr);
+          alert(`Database Warning: Saved locally, but backend sync failed: ${apiErr.message}`);
         }
         addStoredProduct(savedPayload);
       }
@@ -493,6 +571,22 @@ export default function AdminProducts() {
               <div>
                 <label className="text-xs font-bold text-brand-900 mb-1.5 block">Featured Badge</label>
                 <input value={form.badge} onChange={(e) => setField('badge', e.target.value)} className="input-field text-xs sm:text-sm py-2.5" placeholder="e.g. Connoisseur Choice" />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-brand-900 mb-1.5 block">
+                  Showcase Priority / Ranking
+                </label>
+                <input
+                  type="number"
+                  value={form.priority !== undefined ? form.priority : 0}
+                  onChange={(e) => setField('priority', parseInt(e.target.value) || 0)}
+                  className="input-field text-xs sm:text-sm py-2.5 font-mono"
+                  placeholder="0 (Chronological)"
+                />
+                <p className="text-[10px] text-brand-500 mt-1">
+                  Higher numbers (e.g. 10, 50, 100) pin this harvest to the front of the public store.
+                </p>
               </div>
 
               <div className="sm:col-span-2">
@@ -703,6 +797,54 @@ export default function AdminProducts() {
                   {/* Expanded Pricing Editor */}
                   {t.enabled && expandedType === t.type && (
                     <div className="p-4 pt-2 border-t border-brand-100 space-y-4 animate-fade-in bg-cream-50/30">
+                      {/* Variety Specific Image */}
+                      <div>
+                        <label className="text-xs font-bold text-brand-900 mb-1.5 block">
+                          Variety Photo (Optional — uses main product photo if not specified)
+                        </label>
+                        <div className="flex flex-col sm:flex-row items-center gap-3 p-3 rounded-xl bg-white border border-brand-200">
+                          <div className="w-16 h-16 rounded-xl bg-cream-100 flex items-center justify-center overflow-hidden border border-brand-200 shrink-0">
+                            <img
+                              src={t.image || form.image || '/cashew_single_nut.jpg'}
+                              alt={t.type}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src = '/cashew_single_nut.jpg';
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1 space-y-2 w-full">
+                            <input
+                              type="text"
+                              value={t.image || ''}
+                              onChange={(e) => updateTypeField(t.type, 'image', e.target.value)}
+                              placeholder="Image URL or upload custom photo below"
+                              className="input-field text-xs py-1.5 bg-cream-50/50"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => triggerUpload(`type-${t.type}`)}
+                                disabled={!!uploadingField}
+                                className="btn-outline text-xs py-1.5 px-3 flex items-center gap-1.5"
+                              >
+                                <Upload className="w-3.5 h-3.5" />
+                                <span>{uploadingField === `type-${t.type}` ? 'Uploading...' : `Upload Photo for ${t.type}`}</span>
+                              </button>
+                              {t.image && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateTypeField(t.type, 'image', '')}
+                                  className="text-[11px] text-red-600 hover:underline"
+                                >
+                                  Reset to Main Image
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       <div>
                         <label className="text-xs font-bold text-brand-900 mb-1 block">Variety Description</label>
                         <textarea
@@ -977,7 +1119,7 @@ export default function AdminProducts() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAdminProducts.map((p) => {
+          {filteredAdminProducts.map((p, idx) => {
             const allPrices = (p.types || []).flatMap((t: any) => (t.prices || []).map((pr: any) => pr.price)).filter(Boolean);
             const minPrice = allPrices.length ? Math.min(...allPrices) : null;
             const activeVarieties = (p.types || []).filter((t: any) => t.enabled !== false).map((t: any) => t.type);
@@ -1006,6 +1148,11 @@ export default function AdminProducts() {
                       {p.grade && (
                         <span className="inline-flex items-center rounded-full bg-cream-100/95 backdrop-blur-md px-2 py-0.5 text-xs font-mono font-bold text-brand-900 border border-brand-300 shadow-sm">
                           {p.grade}
+                        </span>
+                      )}
+                      {typeof p.priority === 'number' && p.priority > 0 && (
+                        <span className="inline-flex items-center rounded-full bg-amber-500/95 backdrop-blur-md px-2 py-0.5 text-[10px] font-bold text-white border border-amber-300 shadow-sm">
+                          ⭐ Rank #{p.priority}
                         </span>
                       )}
                     </div>
@@ -1057,38 +1204,77 @@ export default function AdminProducts() {
                   </div>
                 </div>
 
-                <div className="px-5 pb-5 pt-0 flex items-center gap-1.5 flex-wrap">
-                  <button
-                    onClick={() => openEdit(p)}
-                    className="flex-1 btn-outline text-xs py-2 font-semibold"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    <span>Edit</span>
-                  </button>
+                <div className="px-5 pb-5 pt-0 flex flex-col gap-2.5">
+                  {/* Quick Reordering Toolbar */}
+                  <div className="flex items-center justify-between p-1.5 rounded-xl bg-cream-100/70 border border-brand-200/60 text-xs">
+                    <div className="flex items-center gap-1.5 text-[11px] text-brand-700 font-medium pl-1">
+                      <span>Priority:</span>
+                      <strong className="font-mono text-brand-950 font-bold">{p.priority || 0}</strong>
+                    </div>
 
-                  <button
-                    onClick={() => duplicateProductForNewStock(p)}
-                    className="p-2 rounded-xl border border-brand-200 text-brand-700 hover:bg-cream-100 transition-colors"
-                    title="Duplicate this grade to add stock for a new variety (e.g. Fried, Roasted) or new origin (e.g. Karnataka)"
-                  >
-                    <Copy className="w-4 h-4 text-brand-700" />
-                  </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handlePinProductToTop(p)}
+                        className="px-2 py-0.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[10px] transition-colors border border-amber-300"
+                        title="Pin this product to the top of the store"
+                      >
+                        ⭐ Pin Top
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveProductUp(p, idx)}
+                        disabled={idx === 0}
+                        className="p-1 rounded-lg border border-brand-200 bg-white hover:bg-cream-200 disabled:opacity-25 disabled:pointer-events-none text-brand-800 transition-colors"
+                        title="Move this product higher / earlier"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveProductDown(p, idx)}
+                        disabled={idx === filteredAdminProducts.length - 1}
+                        className="p-1 rounded-lg border border-brand-200 bg-white hover:bg-cream-200 disabled:opacity-25 disabled:pointer-events-none text-brand-800 transition-colors"
+                        title="Move this product lower / later"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
 
-                  <button
-                    onClick={() => handleToggleActive(p)}
-                    className="p-2 rounded-xl border border-brand-200 text-brand-700 hover:bg-cream-100 transition-colors"
-                    title={p.active !== false ? 'Hide from storefront' : 'Make visible in store'}
-                  >
-                    {p.active !== false ? <Eye className="w-4 h-4 text-forest-700" /> : <EyeOff className="w-4 h-4 text-brand-400" />}
-                  </button>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => openEdit(p)}
+                      className="flex-1 btn-outline text-xs py-2 font-semibold"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
 
-                  <button
-                    onClick={() => handleDelete(p._id || p.id)}
-                    className="p-2 rounded-xl border border-brand-200 text-brand-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors"
-                    title="Delete product"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    <button
+                      onClick={() => duplicateProductForNewStock(p)}
+                      className="p-2 rounded-xl border border-brand-200 text-brand-700 hover:bg-cream-100 transition-colors"
+                      title="Duplicate this grade to add stock for a new variety (e.g. Fried, Roasted) or new origin (e.g. Karnataka)"
+                    >
+                      <Copy className="w-4 h-4 text-brand-700" />
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleActive(p)}
+                      className="p-2 rounded-xl border border-brand-200 text-brand-700 hover:bg-cream-100 transition-colors"
+                      title={p.active !== false ? 'Hide from storefront' : 'Make visible in store'}
+                    >
+                      {p.active !== false ? <Eye className="w-4 h-4 text-forest-700" /> : <EyeOff className="w-4 h-4 text-brand-400" />}
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(p._id || p.id)}
+                      className="p-2 rounded-xl border border-brand-200 text-brand-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors"
+                      title="Delete product"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );

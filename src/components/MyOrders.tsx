@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Package, Clock, Truck, CheckCircle2, XCircle, Search, MapPin, ChevronDown, ChevronUp, ShoppingBag, ShieldCheck } from 'lucide-react';
-import { useUser, SignInButton } from '@clerk/react';
-import { adminApi } from '@/api';
+import { useUser, useClerk } from '@/auth';
+import { api } from '@/api';
 import { formatPrice } from '@/data';
 import { useCustomerOrders } from '@/orders-storage';
 import type { OrderDetails } from '@/types';
@@ -24,6 +24,7 @@ const ORDER_STEPS = ['Received', 'Confirmed', 'Packed', 'Shipped', 'Delivered'];
 
 export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
   const { isSignedIn, user } = useUser();
+  const clerk = useClerk();
   const localOrders = useCustomerOrders();
   const [serverOrders, setServerOrders] = useState<any[]>([]);
   const [loadingServer, setLoadingServer] = useState(false);
@@ -37,9 +38,9 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
     if (!email) return;
 
     setLoadingServer(true);
-    adminApi.orders.list({ search: email })
-      .then((res) => {
-        if (Array.isArray(res.orders)) {
+    api.orders.listByUser(email)
+      .then((res: any) => {
+        if (Array.isArray(res?.orders)) {
           setServerOrders(res.orders);
         }
       })
@@ -106,11 +107,12 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
         </button>
 
         {!isSignedIn && (
-          <SignInButton mode="modal">
-            <button className="text-xs font-semibold text-brand-700 hover:text-brand-950 bg-cream-200/70 hover:bg-cream-300/80 px-3 py-1.5 rounded-full border border-brand-200 transition-colors">
-              Sign In to Sync Orders
-            </button>
-          </SignInButton>
+          <button
+            onClick={() => clerk?.openSignIn?.({ fallbackRedirectUrl: window.location.href })}
+            className="text-xs font-semibold text-brand-700 hover:text-brand-950 bg-cream-200/70 hover:bg-cream-300/80 px-3 py-1.5 rounded-full border border-brand-200 transition-colors"
+          >
+            Sign In to Sync Orders
+          </button>
         )}
       </div>
 
@@ -146,11 +148,12 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
             <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
             <span>Orders placed in this browser are securely saved locally. Sign in with Google to access them on any device.</span>
           </div>
-          <SignInButton mode="modal">
-            <button className="font-bold underline text-amber-900 hover:text-amber-950 shrink-0">
-              Sign In
-            </button>
-          </SignInButton>
+          <button
+            onClick={() => clerk?.openSignIn?.({ fallbackRedirectUrl: window.location.href })}
+            className="font-bold underline text-amber-900 hover:text-amber-950 shrink-0"
+          >
+            Sign In
+          </button>
         </div>
       )}
 
@@ -291,6 +294,7 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
                             alt={item.grade}
                             className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover bg-cream-50 shrink-0 border border-brand-100"
                             onError={(e) => {
+                              e.currentTarget.onerror = null;
                               (e.currentTarget as HTMLImageElement).src = '/cashew_single_nut.jpg';
                             }}
                           />

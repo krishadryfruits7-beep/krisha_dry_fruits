@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ShoppingBag, Truck, CheckCircle, IndianRupee, Clock, ArrowRight, Package, TrendingUp, MapPin } from 'lucide-react';
 import { adminApi } from '@/api';
 import { formatPrice } from '@/data';
+import { getCustomerOrders } from '@/orders-storage';
 import type { AdminPage } from '../AdminApp';
 
 interface Stats {
@@ -20,8 +21,6 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
   delivered: { bg: 'bg-forest-50 border-forest-200', text: 'text-forest-800', dot: 'bg-forest-500' },
   cancelled: { bg: 'bg-red-50 border-red-200', text: 'text-red-800', dot: 'bg-red-500' },
 };
-
-import { getCustomerOrders } from '@/orders-storage';
 
 export default function AdminDashboard({ onNavigate }: { onNavigate: (p: AdminPage, id?: string) => void }) {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -217,23 +216,93 @@ export default function AdminDashboard({ onNavigate }: { onNavigate: (p: AdminPa
         </div>
       )}
 
-      {/* Recent Orders Section */}
+      {/* Recent Orders Section: Mobile Cards (sm:hidden) + Desktop Table (hidden sm:block) */}
       <div className="card overflow-hidden border border-brand-200/70 bg-white shadow-luxury">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-brand-100">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 border-b border-brand-100">
           <div>
-            <h2 className="font-serif text-lg font-bold text-brand-950">Recent Customer Orders</h2>
-            <p className="text-xs text-brand-500">Click any row to inspect items, address, or update fulfillment status.</p>
+            <h2 className="font-serif text-base sm:text-lg font-bold text-brand-950">Recent Customer Orders</h2>
+            <p className="text-xs text-brand-500">Tap any order to inspect items or manage fulfillment.</p>
           </div>
           <button
             onClick={() => onNavigate('orders')}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-700 hover:text-brand-950 transition-colors"
           >
-            <span>View All Orders</span>
+            <span>View All</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile View: Compact clean cards */}
+        <div className="sm:hidden divide-y divide-brand-100">
+          {recentOrders.length === 0 && !loading && (
+            <div className="p-8 text-center text-xs text-brand-500">
+              No orders registered in the system yet.
+            </div>
+          )}
+          {recentOrders.map((order) => {
+            const badge = STATUS_COLORS[order.status] || STATUS_COLORS.pending;
+            const c = order.customer || {};
+            const hasCoords = typeof c.lat === 'number' && typeof c.lng === 'number' && !isNaN(c.lat) && !isNaN(c.lng);
+            const mapQuery = hasCoords
+              ? `${c.lat},${c.lng}`
+              : `${c.doorNo ? c.doorNo + ' ' : ''}${c.address || ''} ${c.city || ''} ${c.state || ''} ${c.pincode || ''} India`;
+
+            return (
+              <div
+                key={order.orderId || order._id}
+                onClick={() => onNavigate('order-detail', order.orderId || order._id)}
+                className="p-4 hover:bg-cream-50/70 active:bg-cream-100/70 cursor-pointer space-y-2.5 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-bold text-brand-900 bg-brand-100/80 px-2 py-0.5 rounded-md">
+                    #{order.orderId}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold capitalize border ${badge.bg} ${badge.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                    <span>{order.status || 'pending'}</span>
+                  </span>
+                </div>
+
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-semibold text-brand-950 text-sm">{order.customer?.fullName || 'Customer'}</div>
+                    <div className="text-[11px] text-brand-500 mt-0.5">
+                      {c.city || 'India'} • {order.items?.length || 1} items
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-serif font-bold text-sm text-brand-950">
+                      {formatPrice(order.total)}
+                    </div>
+                    <div className="text-[10px] text-brand-400">
+                      {new Date(order.createdAt || order.placedAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-brand-100/70 text-[11px]">
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 text-forest-700 hover:text-forest-900 font-semibold"
+                  >
+                    <MapPin className="w-3 h-3 text-forest-600" />
+                    <span>{hasCoords ? 'Verified GPS' : 'View on Maps'}</span>
+                  </a>
+                  <span className="text-brand-600 font-bold flex items-center gap-1">
+                    <span>Manage Details</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop View: Full Table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="bg-cream-100/60 text-xs font-bold text-brand-600 uppercase tracking-wider border-b border-brand-100">

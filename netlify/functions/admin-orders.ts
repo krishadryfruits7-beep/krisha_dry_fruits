@@ -1,4 +1,5 @@
 import type { Handler } from '@netlify/functions';
+import mongoose from 'mongoose';
 import { connectDB } from '../../src/lib/mongodb';
 import Order from '../../src/lib/models/Order';
 
@@ -46,8 +47,15 @@ export const handler: Handler = async (event) => {
       };
     }
 
+    const getOrderQuery = (targetId: string) => {
+      if (mongoose.Types.ObjectId.isValid(targetId)) {
+        return { $or: [{ _id: targetId }, { orderId: targetId }] };
+      }
+      return { orderId: targetId };
+    };
+
     if (method === 'GET' && id) {
-      const order = await Order.findById(id).lean();
+      const order = await Order.findOne(getOrderQuery(id)).lean();
       if (!order) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
       return { statusCode: 200, headers, body: JSON.stringify(order) };
     }
@@ -87,12 +95,13 @@ export const handler: Handler = async (event) => {
 
     if (method === 'PUT' && id) {
       const body = JSON.parse(event.body || '{}');
-      const order = await Order.findByIdAndUpdate(id, body, { new: true });
+      const order = await Order.findOneAndUpdate(getOrderQuery(id), body, { new: true });
+      if (!order) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
       return { statusCode: 200, headers, body: JSON.stringify(order) };
     }
 
     if (method === 'DELETE' && id) {
-      await Order.findByIdAndDelete(id);
+      await Order.findOneAndDelete(getOrderQuery(id));
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
 

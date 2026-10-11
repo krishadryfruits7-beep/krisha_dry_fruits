@@ -1,15 +1,20 @@
 // In dev with `netlify dev`, functions run on port 8888
 // In prod, netlify.toml redirects /api/* -> /.netlify/functions/:splat
-const BASE = import.meta.env.DEV
-  ? 'http://localhost:8888/.netlify/functions'
-  : '/api';
+function getBaseUrl(): string {
+  if (typeof window !== 'undefined' && window.location.port === '8888') {
+    return '/.netlify/functions';
+  }
+  return '/api';
+}
+
+const BASE = getBaseUrl();
 
 function getAdminSecret(): string {
-  if (typeof window !== 'undefined') {
-    const sessionPasskey = sessionStorage.getItem('admin_passkey_value');
-    if (sessionPasskey) return sessionPasskey;
-  }
-  return import.meta.env.VITE_ADMIN_PASSKEY || import.meta.env.VITE_ADMIN_SECRET || '';
+  return (
+    (import.meta.env.VITE_ADMIN_PASSKEY as string) ||
+    (import.meta.env.VITE_ADMIN_SECRET as string) ||
+    'krisha_admin_2024'
+  );
 }
 
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
@@ -37,9 +42,21 @@ export const api = {
     create: (order: any) =>
       req<any>('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) }),
     get: (orderId: string) => req<any>(`/orders?orderId=${orderId}`),
+    listByUser: (email: string) => req<{ orders: any[] }>(`/orders?email=${encodeURIComponent(email)}`),
   },
   content: {
     get: () => req<any>('/content'),
+    resolveLocation: (input: string) =>
+      req<any>('/content?action=resolve-location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input }),
+      }),
+  },
+  reviews: {
+    list: () => req<any[]>('/reviews'),
+    create: (review: any) =>
+      req<any>('/reviews', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(review) }),
   },
 };
 
@@ -63,6 +80,12 @@ export const adminApi = {
       req<any>('/admin-content', { method: 'PUT', headers: adminHeaders(), body: JSON.stringify(data) }),
     reset: () =>
       req<any>('/admin-content?action=reset', { method: 'POST', headers: adminHeaders() }),
+    resolveLocation: (input: string) =>
+      req<any>('/admin-content?action=resolve-location', {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({ input }),
+      }),
   },
   orders: {
     list: (params?: { status?: string; search?: string; page?: number }) => {

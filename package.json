@@ -12,7 +12,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
-    "@clerk/clerk-react": "^5.61.10",
     "@clerk/react": "^6.17.5",
     "@netlify/functions": "^6.0.2",
     "@supabase/supabase-js": "^2.57.4",

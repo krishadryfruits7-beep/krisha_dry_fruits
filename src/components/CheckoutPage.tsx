@@ -1,24 +1,27 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Check, Truck, MapPin, Locate, ChevronRight, Search } from 'lucide-react';
+import { ArrowLeft, Check, Truck, MapPin, Locate, ChevronRight, Search, Loader2, Lock, ShieldCheck } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useCart } from '@/cart-context';
-import { useUser } from '@clerk/react';
+import { useUser, useClerk } from '@/auth';
 import { formatPrice, generateOrderId, getEstimatedDelivery } from '@/data';
 import type { CustomerInfo, OrderDetails } from '@/types';
 
-// Fix leaflet default marker icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
+// Custom Leaflet marker icon
+const deliveryMarkerIcon = L.icon({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
 });
 
 interface CheckoutPageProps {
   onBack: () => void;
-  onPlaceOrder: (order: OrderDetails) => void;
+  onPlaceOrder: (order: OrderDetails) => Promise<void> | void;
 }
 
 const INDIAN_STATES = [
@@ -79,7 +82,8 @@ async function reverseGeocode(lat: number, lng: number): Promise<Partial<Custome
 
 export default function CheckoutPage({ onBack, onPlaceOrder }: CheckoutPageProps) {
   const { items, subtotal, clearCart } = useCart();
-  const { user } = useUser();
+  const { user, isSignedIn, isLoaded } = useUser();
+  const clerk = useClerk();
 
   const [customer, setCustomer] = useState<CustomerInfo>({
     fullName: '',
@@ -111,14 +115,18 @@ export default function CheckoutPage({ onBack, onPlaceOrder }: CheckoutPageProps
   const shipping = subtotal >= 2000 ? 0 : 80;
   const total = subtotal + shipping;
 
-  // Autofill from Clerk on mount
+  // Autofill from Google / Clerk on mount
   useEffect(() => {
     if (!user) return;
+    const computedName = user.fullName || (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '');
+    const computedEmail = user.primaryEmailAddress?.emailAddress || '';
+    const computedPhone = user.primaryPhoneNumber?.phoneNumber?.replace(/\D/g, '').slice(-10) || '';
+
     setCustomer((prev) => ({
       ...prev,
-      fullName: prev.fullName || user.fullName || '',
-      email: prev.email || user.primaryEmailAddress?.emailAddress || '',
-      phone: prev.phone || user.primaryPhoneNumber?.phoneNumber?.replace(/\D/g, '').slice(-10) || '',
+      fullName: prev.fullName || computedName,
+      email: prev.email || computedEmail,
+      phone: prev.phone || computedPhone,
     }));
   }, [user]);
 
@@ -324,12 +332,82 @@ export default function CheckoutPage({ onBack, onPlaceOrder }: CheckoutPageProps
       placedAt: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
       estimatedDelivery: getEstimatedDelivery(),
     };
-    clearCart();
-    onPlaceOrder(order);
-    setPlacing(false);
+    try {
+      await onPlaceOrder(order);
+      clearCart();
+    } catch (err) {
+      console.error('Failed to submit order:', err);
+    } finally {
+      setPlacing(false);
+    }
   };
 
-  if (items.length === 0) {
+  // Case 1: Compulsory Login Gate
+  if (isLoaded && !isSignedIn) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-800 transition-colors mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to cart
+        </button>
+
+        <div className="card p-8 sm:p-10 text-center bg-white border border-brand-200/80 shadow-luxury space-y-6 animate-scale-in">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto shadow-inner">
+            <Lock className="w-8 h-8" />
+          </div>
+
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100/80 border border-amber-300 px-3 py-1 rounded-full">
+              Authentication Required
+            </span>
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-brand-950 mt-3 mb-2">
+              Sign In to Place Your Order
+            </h1>
+            <p className="text-xs sm:text-sm text-brand-600 max-w-md mx-auto leading-relaxed">
+              We require Google authentication before checkout so your order details are securely tracked and your delivery contact info is automatically filled.
+            </p>
+          </div>
+
+          <div className="max-w-xs mx-auto pt-2">
+            <button
+              type="button"
+              onClick={() => clerk?.openSignIn?.({ fallbackRedirectUrl: window.location.href })}
+              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-white border-2 border-brand-300 hover:border-brand-600 text-brand-950 text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 group cursor-pointer"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>Continue with Google</span>
+              <ChevronRight className="w-4 h-4 ml-auto text-brand-400 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left pt-6 border-t border-brand-100">
+            <div className="p-3 rounded-xl bg-cream-50 border border-brand-200/60 text-xs">
+              <span className="font-bold text-brand-900 block mb-0.5">⚡ Auto-fill Profile</span>
+              <p className="text-[11px] text-brand-500">Your full name & email pre-fill in 1 click.</p>
+            </div>
+            <div className="p-3 rounded-xl bg-cream-50 border border-brand-200/60 text-xs">
+              <span className="font-bold text-brand-900 block mb-0.5">📦 Live Dispatch</span>
+              <p className="text-[11px] text-brand-500">Track delivery status & waybill updates.</p>
+            </div>
+            <div className="p-3 rounded-xl bg-cream-50 border border-brand-200/60 text-xs">
+              <span className="font-bold text-brand-900 block mb-0.5">🛡️ Verified Security</span>
+              <p className="text-[11px] text-brand-500">Secured with Google OAuth 2.0.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Case 2: Cart empty
+  if (!placing && items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <h1 className="font-serif text-2xl font-bold text-brand-900 mb-2">Your cart is empty</h1>
@@ -457,7 +535,7 @@ export default function CheckoutPage({ onBack, onPlaceOrder }: CheckoutPageProps
                 />
                 <MapClickHandler onMapClick={handleMapClick} />
                 <MapFlyTo coords={flyTo} />
-                {markerPos && <Marker position={markerPos} />}
+                {markerPos && <Marker position={markerPos} icon={deliveryMarkerIcon} />}
               </MapContainer>
               <div className="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-brand-200 shadow-sm text-[11px] text-brand-700 flex items-center justify-between pointer-events-none z-[1000]">
                 <span>👉 Click on the map to set or refine your delivery pin</span>
@@ -628,14 +706,61 @@ export default function CheckoutPage({ onBack, onPlaceOrder }: CheckoutPageProps
             <button
               type="submit"
               disabled={placing}
-              className="w-full mt-5 flex items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-3.5 text-sm font-semibold text-cream-50 transition-all hover:bg-brand-700 hover:shadow-lg active:scale-95 disabled:opacity-60"
+              className="w-full mt-5 flex items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-3.5 text-sm font-semibold text-cream-50 transition-all hover:bg-brand-700 hover:shadow-lg active:scale-95 disabled:opacity-60 cursor-pointer"
             >
-              <Check className="w-4 h-4" />
-              {placing ? 'Placing Order...' : 'Place Order'}
+              {placing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Processing Order...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Place Order</span>
+                </>
+              )}
             </button>
           </div>
         </div>
       </form>
+
+      {/* Fullscreen Luxury Order Processing Modal */}
+      {placing && (
+        <div className="fixed inset-0 z-[9999] bg-brand-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 sm:p-10 max-w-md w-full text-center shadow-2xl border border-brand-200 space-y-6 animate-scale-in">
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="w-20 h-20 rounded-full border-4 border-brand-100 border-t-brand-700 animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Truck className="w-8 h-8 text-brand-800 animate-pulse" />
+              </div>
+            </div>
+
+            <div>
+              <h2 className="font-serif text-2xl font-bold text-brand-950">
+                Registering Your Order
+              </h2>
+              <p className="text-xs text-brand-600 mt-1">
+                Please wait while we log your order and verify warehouse allocation...
+              </p>
+            </div>
+
+            <div className="space-y-2.5 text-left bg-cream-50 p-4 rounded-2xl border border-brand-200/70 text-xs">
+              <div className="flex items-center gap-2 text-forest-800 font-semibold">
+                <Check className="w-4 h-4 text-forest-600 shrink-0" />
+                <span>Harvest caliber & cashew packs reserved</span>
+              </div>
+              <div className="flex items-center gap-2 text-forest-800 font-semibold">
+                <Check className="w-4 h-4 text-forest-600 shrink-0" />
+                <span>Exact GPS delivery coordinates locked</span>
+              </div>
+              <div className="flex items-center gap-2 text-brand-700 font-semibold">
+                <Loader2 className="w-4 h-4 animate-spin text-brand-600 shrink-0" />
+                <span>Generating invoice & courier dispatch docket...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

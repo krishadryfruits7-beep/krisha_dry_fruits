@@ -18,9 +18,10 @@ import Contact from '@/components/Contact';
 import MyOrders from '@/components/MyOrders';
 import { api } from '@/api';
 import type { Product, OrderDetails } from '@/types';
-import { saveCustomerOrder } from '@/orders-storage';
+import { saveCustomerOrder, getCustomerOrders } from '@/orders-storage';
 import { useStoredProducts, syncWithServerProducts } from '@/products-storage';
 import { syncWithServerContent } from '@/site-content';
+import { syncWithServerReviews } from '@/reviews-storage';
 
 type Page = 'home' | 'products' | 'grades' | 'about' | 'contact' | 'product' | 'checkout' | 'confirmation' | 'myorders';
 
@@ -67,6 +68,14 @@ function App() {
       })
       .catch(() => {})
       .finally(() => setProductsLoading(false));
+
+    api.reviews.list()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          syncWithServerReviews(data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const navigate = useCallback((p: string) => {
@@ -110,16 +119,51 @@ function App() {
     }
   }, [page, selectedProduct, products]);
 
-  // Handle browser back/forward
+  // Handle browser back/forward and recovery
   useEffect(() => {
+    // Initialize history state on first mount
+    if (!window.history.state || !window.history.state.page) {
+      window.history.replaceState({ page: getInitialPage() }, '', window.location.href);
+    }
+
+    // Recover order if on confirmation page
+    const initialPage = getInitialPage();
+    if (initialPage === 'confirmation' && !order) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const oId = searchParams.get('orderId') || searchParams.get('id');
+      const allOrders = getCustomerOrders();
+      if (oId) {
+        const found = allOrders.find((x) => x.orderId === oId || (x as any)._id === oId);
+        if (found) setOrder(found);
+      } else if (allOrders.length > 0) {
+        setOrder(allOrders[0]);
+      }
+    }
+
     const onPop = (e: PopStateEvent) => {
       const p = (e.state?.page as Page) || getInitialPage();
       setPage(p);
-      if (p !== 'product') setSelectedProduct(null);
+      if (p !== 'product') {
+        setSelectedProduct(null);
+      } else if (e.state?.productId) {
+        const found = products.find((prod) => prod.id === e.state.productId || (prod as any)._id === e.state.productId);
+        if (found) setSelectedProduct(found);
+      }
+
+      if (p === 'confirmation') {
+        const oId = e.state?.orderId || new URLSearchParams(window.location.search).get('orderId');
+        const allOrders = getCustomerOrders();
+        if (oId) {
+          const found = allOrders.find((x) => x.orderId === oId || (x as any)._id === oId);
+          if (found) setOrder(found);
+        } else if (allOrders.length > 0) {
+          setOrder(allOrders[0]);
+        }
+      }
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [products, order]);
 
   const viewProductById = useCallback((id: string) => {
     const product = products.find((p) => p.id === id || (p as any)._id === id);
@@ -160,14 +204,16 @@ function App() {
 
   const handlePlaceOrder = useCallback(async (o: OrderDetails) => {
     saveCustomerOrder(o);
+    setOrder(o);
+    setPage('confirmation');
+    window.history.pushState({ page: 'confirmation', orderId: o.orderId }, '', `/confirmation?orderId=${o.orderId}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     try {
       await api.orders.create(o);
     } catch (err) {
       console.error('Failed to sync order to server:', err);
     }
-    setOrder(o);
-    setPage('confirmation');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   // Close cart on page change
@@ -456,12 +502,20 @@ function App() {
             />
           )}
 
-          {page === 'confirmation' && order && (
-            <OrderConfirmation
-              order={order}
-              onContinueShopping={() => navigate('home')}
-              onViewOrders={() => navigate('myorders')}
-            />
+          {page === 'confirmation' && (
+            order ? (
+              <OrderConfirmation
+                order={order}
+                onContinueShopping={() => navigate('home')}
+                onViewOrders={() => navigate('myorders')}
+              />
+            ) : (
+              <div className="max-w-md mx-auto py-24 px-4 text-center">
+                <div className="w-12 h-12 rounded-full border-4 border-brand-200 border-t-brand-700 animate-spin mx-auto mb-4" />
+                <h3 className="font-serif text-xl font-bold text-brand-950">Retrieving Order Details...</h3>
+                <p className="text-xs text-brand-500 mt-1">Please wait while your verified order confirmation loads.</p>
+              </div>
+            )
           )}
         </main>
 
