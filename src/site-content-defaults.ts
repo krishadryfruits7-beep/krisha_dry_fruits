@@ -36,8 +36,9 @@ export interface ContactInfo {
   latitude?: string;
   longitude?: string;
   hours: string;
-  fssaiNumber: string;
-  fssaiText: string;
+  fssaiNumber?: string;
+  fssaiText?: string;
+  showFssai?: boolean;
 }
 
 export interface SocialLinks {
@@ -74,35 +75,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     { id: '3', iconName: 'Truck', title: 'Pan-India', subtitle: 'Delivery' },
     { id: '4', iconName: 'ShieldCheck', title: 'Trusted by', subtitle: 'Thousands' },
   ],
-  locationBanners: [
-    {
-      id: 'loc-1',
-      tag: '100% Sourced in Goa & Karnataka',
-      locationKey: 'Goa & Karnataka',
-      title: 'Explore Entire Premium Collection',
-      subtitle: 'Sun-dried along the Konkan & Malabar coastline with rich natural buttery sweetness',
-      image: '/hero_cashew_bowl.jpg',
-      linkText: 'View All Cashews',
-    },
-    {
-      id: 'loc-2',
-      tag: 'Goa Coastal Heritage Belt',
-      locationKey: 'Goa',
-      title: 'Margao & Panaji Coastal Groves',
-      subtitle: 'Artisanal harvesting from certified generational family farms along the Arabian Sea',
-      image: '/hero_cashew_bowl.jpg',
-      linkText: 'Explore Goa Harvest',
-    },
-    {
-      id: 'loc-3',
-      tag: 'Karnataka Malnad Foothills',
-      locationKey: 'Karnataka',
-      title: 'Jumbo W180 King Cashews',
-      subtitle: 'Hand-picked mammoth kernels with delicate crunch and naturally high nutrient profile',
-      image: '/hero_cashew_bowl.jpg',
-      linkText: 'Discover W180 Grade',
-    },
-  ],
+  locationBanners: [],
   contact: {
     phone: '+91 98765 43210',
     extraPhone: '+91 91234 56789',
@@ -114,8 +87,9 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     latitude: '15.2736',
     longitude: '73.9582',
     hours: 'Mon - Sat: 9:00 AM - 7:00 PM',
-    fssaiNumber: '10020021000123',
-    fssaiText: 'FSSAI Certified Unit • Govt. Registered Premium Agri-Produce Facility',
+    fssaiNumber: '',
+    fssaiText: '',
+    showFssai: false,
   },
   social: {
     facebook: 'https://facebook.com',

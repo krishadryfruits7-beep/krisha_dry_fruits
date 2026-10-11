@@ -50,6 +50,7 @@ export default function AdminOrderDetail({ orderId, onBack }: { orderId: string;
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [copiedTracking, setCopiedTracking] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
 
@@ -107,7 +108,8 @@ export default function AdminOrderDetail({ orderId, onBack }: { orderId: string;
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err: any) {
-      alert(err.message || 'Failed to save changes');
+      setSaveError(err.message || 'Failed to save changes');
+      setTimeout(() => setSaveError(null), 4000);
     } finally {
       setSaving(false);
     }
@@ -610,6 +612,11 @@ export default function AdminOrderDetail({ orderId, onBack }: { orderId: string;
             </div>
 
             {/* Save Button */}
+            {saveError && (
+              <p className="text-xs text-red-700 bg-red-50 p-2.5 rounded-xl border border-red-200 font-medium">
+                {saveError}
+              </p>
+            )}
             <button
               onClick={handleSave}
               disabled={saving}

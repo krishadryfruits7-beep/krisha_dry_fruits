@@ -1,0 +1,13 @@
+# Robots.txt for Krisha Dry Fruits
+# https://krishadryfruits.in/
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /.netlify/
+
+# Host & Sitemap specification
+Host: https://krishadryfruits.in
+Sitemap: https://krishadryfruits.in/sitemap.xml

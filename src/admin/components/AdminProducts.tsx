@@ -1,8 +1,30 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Upload, X, Check, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, PlusCircle, Sparkles, Copy, Search, Filter, RefreshCw, Database } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Eye,
+  EyeOff,
+  Upload,
+  X,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  ToggleLeft,
+  ToggleRight,
+  PlusCircle,
+  Sparkles,
+  Copy,
+  Search,
+  Filter,
+  RefreshCw,
+  Database,
+  CheckCircle2,
+  AlertTriangle,
+} from 'lucide-react';
 import { adminApi } from '@/api';
 import { uploadToCloudinary } from '@/lib/cloudinaryUpload';
-import { formatPrice, PRODUCTS } from '@/data';
+import { formatPrice } from '@/data';
 import {
   getStoredProducts,
   saveStoredProducts,
@@ -64,7 +86,14 @@ export default function AdminProducts() {
   const [editProduct, setEditProduct] = useState<any | null>(null);
   const [form, setForm] = useState<any>(emptyProduct());
   const [saving, setSaving] = useState(false);
-  const [seeding, setSeeding] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast((curr) => (curr?.message === message ? null : curr));
+    }, 4500);
+  };
   const [expandedType, setExpandedType] = useState<string | null>(null);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -99,10 +128,10 @@ export default function AdminProducts() {
       if (Array.isArray(data)) {
         const synced = syncWithServerProducts(data as any);
         setProducts(synced);
-        alert(`Successfully synced ${synced.length} products directly from MongoDB Atlas (krisha_dry_fruits)!`);
+        showToast(`Successfully synced ${synced.length} products from database.`, 'success');
       }
     } catch (err: any) {
-      alert(`MongoDB Atlas sync failed: ${err.message}`);
+      showToast(`Database sync notice: ${err.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -153,7 +182,7 @@ export default function AdminProducts() {
     const name = customVariety.trim();
     if (!name) return;
     if (form.types.some((t: any) => t.type.toLowerCase() === name.toLowerCase())) {
-      alert('This variety is already listed.');
+      showToast('This variety is already listed.', 'info');
       return;
     }
     const newType = {
@@ -172,24 +201,6 @@ export default function AdminProducts() {
     }));
     setCustomVariety('');
     setExpandedType(name);
-  };
-
-  const handleSeed = async () => {
-    setSeeding(true);
-    try {
-      saveStoredProducts(PRODUCTS as any);
-      try {
-        await adminApi.products.seed();
-      } catch (apiErr) {
-        console.warn('Backend seed failed, seeded local storage:', apiErr);
-      }
-      alert('Sample cashew grades seeded successfully!');
-      load();
-    } catch (e: any) {
-      alert(e.message);
-    } finally {
-      setSeeding(false);
-    }
   };
 
   const handleDelete = async (id: string) => {
@@ -350,7 +361,7 @@ export default function AdminProducts() {
         return f;
       });
     } catch (err: any) {
-      alert('Upload failed: ' + err.message);
+      showToast('Upload failed: ' + err.message, 'error');
     } finally {
       setUploadingField(null);
     }
@@ -410,9 +421,18 @@ export default function AdminProducts() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const enabledTypes = form.types.filter((t: any) => t.enabled);
-    if (enabledTypes.length === 0) { alert('Enable at least one variety (Raw, Roasted, etc.)'); return; }
-    if (!form.image) { alert('Main image is required'); return; }
-    if (!form.grade || !form.grade.trim()) { alert('Please enter a cashew grade (e.g. W120, W334, S354)'); return; }
+    if (enabledTypes.length === 0) {
+      showToast('Please enable at least one variety (Raw, Roasted, etc.)', 'error');
+      return;
+    }
+    if (!form.image) {
+      showToast('Main product image is required', 'error');
+      return;
+    }
+    if (!form.grade || !form.grade.trim()) {
+      showToast('Please enter a cashew grade code (e.g. W120, W180, S354)', 'error');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -434,10 +454,10 @@ export default function AdminProducts() {
         updateStoredProduct(targetId, payload);
         try {
           await adminApi.products.update(targetId, payload);
-          alert(`Product "${payload.name}" updated successfully in database!`);
+          showToast(`Product "${payload.name}" updated successfully!`, 'success');
         } catch (apiErr: any) {
           console.error('Backend update failed:', apiErr);
-          alert(`Notice: Saved to local catalogue, but MongoDB sync error: ${apiErr.message}`);
+          showToast(`Notice: Saved to local catalog, MongoDB notice: ${apiErr.message}`, 'info');
         }
       } else {
         let savedPayload = { ...payload, createdAt: new Date().toISOString() };
@@ -446,10 +466,10 @@ export default function AdminProducts() {
           if (res && (res._id || res.id)) {
             savedPayload = { ...savedPayload, _id: res._id, id: res._id, createdAt: res.createdAt || savedPayload.createdAt };
           }
-          alert(`Product "${savedPayload.name}" successfully added to MongoDB Atlas database!`);
+          showToast(`Product "${savedPayload.name}" successfully created!`, 'success');
         } catch (apiErr: any) {
           console.error('Backend create failed:', apiErr);
-          alert(`Database Warning: Saved locally, but backend sync failed: ${apiErr.message}`);
+          showToast(`Warning: Saved locally, backend sync notice: ${apiErr.message}`, 'info');
         }
         addStoredProduct(savedPayload);
       }
@@ -457,7 +477,7 @@ export default function AdminProducts() {
       setShowForm(false);
       load();
     } catch (err: any) {
-      alert(err.message || 'Error saving grade');
+      showToast(err.message || 'Error saving product', 'error');
     } finally {
       setSaving(false);
     }
@@ -977,27 +997,17 @@ export default function AdminProducts() {
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-forest-50 border border-forest-200 text-forest-800 text-xs font-semibold shadow-xs">
             <span className="w-2 h-2 rounded-full bg-forest-500 animate-pulse" />
             <Database className="w-3.5 h-3.5 text-forest-700" />
-            <span>Atlas: krisha_dry_fruits</span>
+            <span>krisha_dry_fruits</span>
           </div>
 
           <button
             onClick={handleSyncWithAtlas}
             disabled={loading}
             className="btn-outline text-xs py-2 px-3.5 font-semibold flex items-center gap-1.5 shadow-sm"
-            title="Fetch live records directly from MongoDB Atlas database"
+            title="Sync products directly with database"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-forest-700 ${loading ? 'animate-spin' : ''}`} />
-            <span>Sync Atlas</span>
-          </button>
-
-          <button
-            onClick={handleSeed}
-            disabled={seeding}
-            className="btn-outline text-xs py-2 px-3 font-semibold flex items-center gap-1.5 shadow-sm hidden md:flex"
-            title="Seed standard baseline cashew grades"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-brand-600" />
-            <span>{seeding ? 'Seeding...' : 'Seed Defaults'}</span>
+            <span>Sync</span>
           </button>
 
           <button
@@ -1294,16 +1304,27 @@ export default function AdminProducts() {
                   Reset Filters
                 </button>
               )}
-              <button onClick={openAdd} className="btn-primary py-2 px-5 text-xs mr-2">
+              <button onClick={openAdd} className="btn-primary py-2 px-5 text-xs">
                 Add Grade / Product
               </button>
-              {products.length === 0 && (
-                <button onClick={handleSeed} disabled={seeding} className="btn-outline py-2 px-5 text-xs">
-                  {seeding ? 'Seeding...' : 'Seed Defaults'}
-                </button>
-              )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modern In-App Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-fade-in flex items-center gap-3 px-4 py-3 rounded-2xl shadow-luxury-lg border bg-white max-w-md transition-all">
+          {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />}
+          {toast.type === 'error' && <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />}
+          {toast.type === 'info' && <Database className="w-5 h-5 text-brand-600 shrink-0" />}
+          <span className="text-xs font-semibold text-brand-950 flex-1 leading-snug">{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="p-1 rounded-lg text-brand-400 hover:text-brand-700 hover:bg-cream-100 transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>

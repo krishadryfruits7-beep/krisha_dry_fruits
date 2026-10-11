@@ -32,6 +32,9 @@ import {
   Copy,
   ChevronUp,
   ChevronDown,
+  Pencil,
+  X,
+  ArrowRight,
 } from 'lucide-react';
 import { adminApi, api } from '@/api';
 import {
@@ -73,6 +76,26 @@ export default function AdminContent() {
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [pastedLink, setPastedLink] = useState('');
 
+  // Location Banner Pop-up Modal State
+  const [bannerModalOpen, setBannerModalOpen] = useState(false);
+  const [editingBannerIndex, setEditingBannerIndex] = useState<number | null>(null);
+  const [bannerForm, setBannerForm] = useState<LocationBanner>({
+    id: '',
+    tag: '',
+    locationKey: '',
+    title: '',
+    subtitle: '',
+    image: '',
+    linkText: '',
+  });
+
+  // Modern In-App Toast Notification
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   // Verified Locations from DB
   const [dbLocations, setDbLocations] = useState<string[]>(['Goa', 'Karnataka', 'Goa & Karnataka']);
 
@@ -87,7 +110,7 @@ export default function AdminContent() {
             contact: { ...prev.contact, ...(remote.contact || {}) },
             social: { ...prev.social, ...(remote.social || {}) },
             features: Array.isArray(remote.features) && remote.features.length > 0 ? remote.features : prev.features,
-            locationBanners: Array.isArray(remote.locationBanners) && remote.locationBanners.length > 0 ? remote.locationBanners : prev.locationBanners,
+            locationBanners: Array.isArray(remote.locationBanners) ? remote.locationBanners : prev.locationBanners,
           }));
         }
       })
@@ -218,7 +241,8 @@ export default function AdminContent() {
           const nextContact = { ...prev.contact };
           if (resolvedData.latitude) nextContact.latitude = resolvedData.latitude;
           if (resolvedData.longitude) nextContact.longitude = resolvedData.longitude;
-          if (resolvedData.address) nextContact.address = resolvedData.address;
+          // IMPORTANT: Do NOT touch or overwrite prev.contact.address!
+          // Full physical store address is strictly user-defined reading text.
           if (resolvedData.landmark) nextContact.landmark = resolvedData.landmark;
           if (resolvedData.googleMapsUrl) nextContact.googleMapsUrl = resolvedData.googleMapsUrl;
           if (resolvedData.shopName && (!nextContact.shopName || nextContact.shopName.includes('Flagship') || nextContact.shopName.includes('Goa'))) {
@@ -228,15 +252,15 @@ export default function AdminContent() {
         });
 
         if (resolvedData.googleMapsUrl) setPastedLink(resolvedData.googleMapsUrl);
-        const locDesc = resolvedData.landmark || (resolvedData.address ? resolvedData.address.split(',').slice(0, 2).join(',') : '') || 'Store Location';
-        setGpsSuccess(`Location set: ${locDesc}${resolvedData.latitude ? ` (${resolvedData.latitude}, ${resolvedData.longitude})` : ''} — Address, Landmark, Navigation Link & Live Map Updated!`);
+        const locDesc = resolvedData.landmark || 'Store Map Pin';
+        setGpsSuccess(`Map Pin updated: ${locDesc}${resolvedData.latitude ? ` (${resolvedData.latitude}, ${resolvedData.longitude})` : ''} — Navigation Link & Live Map Updated! (Physical store text address was left untouched)`);
         setTimeout(() => setGpsSuccess(null), 7000);
       } else {
-        setGpsError('Could not automatically resolve this location. You can enter the address or coordinates directly.');
+        setGpsError('Could not automatically resolve this location. You can enter the coordinates or map link directly.');
         setTimeout(() => setGpsError(null), 6000);
       }
     } catch (err: any) {
-      setGpsError('Location resolution error. You can enter the address or coordinates directly.');
+      setGpsError('Location resolution error. You can enter coordinates or a maps embed directly.');
       setTimeout(() => setGpsError(null), 6000);
     } finally {
       setSearchingPlace(false);
@@ -244,9 +268,9 @@ export default function AdminContent() {
   };
 
   const handleSearchPlace = async (customQuery?: string) => {
-    const q = (customQuery || placeSearchQuery || content.contact.address || '').trim();
+    const q = (customQuery || placeSearchQuery || '').trim();
     if (!q) {
-      setGpsError('Please type a shop name, street address, landmark, or city to search.');
+      setGpsError('Please type a place name, street, or city to search on map.');
       return;
     }
     await handleAutoResolveAndFillLocation(q);
@@ -265,16 +289,6 @@ export default function AdminContent() {
       async (pos) => {
         const lat = pos.coords.latitude.toFixed(6);
         const lng = pos.coords.longitude.toFixed(6);
-        let detectedAddress = '';
-        let detectedLandmark = '';
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
-          const data = await res.json();
-          if (data && data.display_name) {
-            detectedAddress = data.display_name;
-            detectedLandmark = data.address?.suburb || data.address?.neighbourhood || data.address?.road || '';
-          }
-        } catch { /* proceed */ }
 
         setContent((prev) => ({
           ...prev,
@@ -283,13 +297,11 @@ export default function AdminContent() {
             latitude: lat,
             longitude: lng,
             googleMapsUrl: `https://www.google.com/maps?q=${lat},${lng}`,
-            address: detectedAddress || prev.contact.address,
-            landmark: detectedLandmark || prev.contact.landmark,
           },
         }));
         setPastedLink(`https://www.google.com/maps?q=${lat},${lng}`);
         setDetectingGps(false);
-        setGpsSuccess(`GPS Auto-Detected: ${lat}, ${lng}${detectedAddress ? ` (${detectedAddress.split(',').slice(0, 3).join(',')})` : ''} — Address & Map auto-filled!`);
+        setGpsSuccess(`GPS Auto-Detected: ${lat}, ${lng} — Live Map & Navigation pin updated! (Physical address left unchanged)`);
         setTimeout(() => setGpsSuccess(null), 7000);
       },
       (err) => {
@@ -301,7 +313,7 @@ export default function AdminContent() {
     );
   };
 
-  const handleCoordinatesChange = async (latVal: string, lngVal: string) => {
+  const handleCoordinatesChange = (latVal: string, lngVal: string) => {
     const cleanLat = latVal.trim();
     const cleanLng = lngVal.trim();
     const mapsUrl =
@@ -320,25 +332,8 @@ export default function AdminContent() {
     }));
 
     if (cleanLat && cleanLng && !isNaN(Number(cleanLat)) && !isNaN(Number(cleanLng))) {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${cleanLat}&lon=${cleanLng}&addressdetails=1`);
-        const data = await res.json();
-        if (data && data.display_name) {
-          setContent((prev) => ({
-            ...prev,
-            contact: {
-              ...prev.contact,
-              latitude: cleanLat,
-              longitude: cleanLng,
-              address: data.display_name,
-              landmark: data.address?.suburb || data.address?.neighbourhood || prev.contact.landmark || '',
-              googleMapsUrl: mapsUrl,
-            },
-          }));
-          setGpsSuccess(`Coordinates reverse-geocoded: ${data.display_name.split(',').slice(0, 3).join(',')}`);
-          setTimeout(() => setGpsSuccess(null), 5000);
-        }
-      } catch {}
+      setGpsSuccess(`GPS Coordinates updated: ${cleanLat}, ${cleanLng}. Map pin centered!`);
+      setTimeout(() => setGpsSuccess(null), 4000);
     }
   };
 
@@ -352,7 +347,7 @@ export default function AdminContent() {
     // Validate that all location cards have a valid database location key
     const missingLoc = content.locationBanners.find((b) => !b.locationKey || !b.locationKey.trim());
     if (missingLoc) {
-      alert('Please choose a valid sourcing region from the dropdown for all location cards before saving.');
+      showToast('Please choose or enter a sourcing region name for all location cards before saving.', 'error');
       return;
     }
 
@@ -362,8 +357,10 @@ export default function AdminContent() {
     try {
       // Commit directly to MongoDB Atlas
       await adminApi.content.update(content);
+      showToast('All storefront content published live successfully!', 'success');
     } catch (err) {
       console.warn('Backend content save failed, stored in local cache:', err);
+      showToast('Saved locally. Cloud sync pending.', 'info');
     } finally {
       setSaving(false);
       setSavedSuccess(true);
@@ -406,6 +403,7 @@ export default function AdminContent() {
     setShowResetConfirm(false);
     try {
       await adminApi.content.reset();
+      showToast('Restored default storefront templates.', 'info');
     } catch (err) {
       console.warn('Backend reset failed, restored local defaults:', err);
     } finally {
@@ -422,7 +420,7 @@ export default function AdminContent() {
     }));
   };
 
-  const updateContact = (field: keyof SiteContent['contact'], value: string) => {
+  const updateContact = (field: keyof SiteContent['contact'], value: any) => {
     setContent((prev) => ({
       ...prev,
       contact: { ...prev.contact, [field]: value },
@@ -444,31 +442,67 @@ export default function AdminContent() {
     });
   };
 
-  const addLocationCard = () => {
-    const assigned = new Set(content.locationBanners.map((b) => (b.locationKey || '').trim()).filter(Boolean));
-    const available = dbLocations.filter((loc) => !assigned.has(loc.trim()));
+  // Location Banner Modal Controls
+  const openAddBanner = () => {
+    const defaultRegion = dbLocations[0] || 'Goa';
+    setEditingBannerIndex(null);
+    setBannerForm({
+      id: `loc-${Date.now()}`,
+      tag: `100% Sourced in ${defaultRegion}`,
+      locationKey: defaultRegion,
+      title: `${defaultRegion} Coastal Harvest Cashews`,
+      subtitle: `Artisanal harvesting and sun-drying in ${defaultRegion} orchards`,
+      image: '/hero_cashew_bowl.jpg',
+      linkText: `Explore ${defaultRegion} Cashews`,
+    });
+    setBannerModalOpen(true);
+  };
 
-    if (available.length === 0) {
-      alert(`All ${dbLocations.length} verified database locations already have a banner card. Duplicate banners for the same location are not permitted.`);
+  const openEditBanner = (index: number) => {
+    const item = content.locationBanners[index];
+    if (!item) return;
+    setEditingBannerIndex(index);
+    setBannerForm({ ...item });
+    setBannerModalOpen(true);
+  };
+
+  const handleSaveBannerModal = async (publishLive: boolean = false) => {
+    const locKey = (bannerForm.locationKey || '').trim();
+    if (!locKey) {
+      showToast('Please enter or select a sourcing region name.', 'error');
+      return;
+    }
+    if (!bannerForm.title.trim()) {
+      showToast('Please enter a banner title.', 'error');
       return;
     }
 
-    const nextLoc = available[0];
-    const newCard: LocationBanner = {
-      id: `loc-${Date.now()}`,
-      tag: `100% Sourced in ${nextLoc}`,
-      locationKey: nextLoc,
-      title: `${nextLoc} Coastal Harvest Cashews`,
-      subtitle: `Artisanal harvesting and sun-drying in ${nextLoc} orchards`,
-      image: '/hero_cashew_bowl.jpg',
-      linkText: `Explore ${nextLoc} Cashews`,
-    };
+    let nextBanners: LocationBanner[];
+    if (editingBannerIndex === null) {
+      nextBanners = [bannerForm, ...content.locationBanners];
+    } else {
+      nextBanners = [...content.locationBanners];
+      nextBanners[editingBannerIndex] = bannerForm;
+    }
 
-    // Added at the TOP of the array so admin sees it immediately!
-    setContent((prev) => ({
-      ...prev,
-      locationBanners: [newCard, ...prev.locationBanners],
-    }));
+    const nextContent = { ...content, locationBanners: nextBanners };
+    setContent(nextContent);
+    setBannerModalOpen(false);
+
+    if (publishLive) {
+      setSaving(true);
+      saveSiteContent(nextContent);
+      try {
+        await adminApi.content.update(nextContent);
+        showToast('Location banner saved and published live to cloud!', 'success');
+      } catch (err) {
+        showToast('Saved locally. Cloud sync pending.', 'info');
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      showToast('Location banner saved. Click "Save & Publish Live" to publish to cloud.', 'success');
+    }
   };
 
   const moveLocationCardUp = (index: number) => {
@@ -493,23 +527,12 @@ export default function AdminContent() {
     });
   };
 
-  const updateLocationCard = (index: number, field: keyof LocationBanner, value: string) => {
-    setContent((prev) => {
-      const nextLocations = [...prev.locationBanners];
-      nextLocations[index] = { ...nextLocations[index], [field]: value };
-      return { ...prev, locationBanners: nextLocations };
-    });
-  };
-
   const removeLocationCard = (index: number) => {
-    if (content.locationBanners.length <= 1) {
-      alert('You need at least one location banner card.');
-      return;
-    }
     setContent((prev) => ({
       ...prev,
       locationBanners: prev.locationBanners.filter((_, i) => i !== index),
     }));
+    showToast('Location banner removed.', 'info');
   };
 
   return (
@@ -867,219 +890,187 @@ export default function AdminContent() {
       )}
 
       {/* TAB 3: LOCATION CASHEW BANNERS */}
-      {activeTab === 'locations' && (() => {
-        const assignedSet = new Set(content.locationBanners.map((b) => (b.locationKey || '').trim()).filter(Boolean));
-        const availableLocs = dbLocations.filter((l) => !assignedSet.has(l.trim()));
-        const canAddBanner = availableLocs.length > 0;
+      {activeTab === 'locations' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-luxury border border-brand-200/60 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-brand-100 gap-3">
+            <div>
+              <h2 className="font-serif text-lg font-bold text-brand-950">
+                Location-wise Cashew Cards & Sourcing Banners
+              </h2>
+              <p className="text-xs text-brand-600 mt-0.5">
+                Manage the sourcing regions showcased to customers. Each banner features regional orchard photography, harvest notes, and direct links.
+              </p>
+            </div>
 
-        return (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-luxury border border-brand-200/60 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-brand-100 gap-3">
-              <div>
-                <h2 className="font-serif text-lg font-bold text-brand-950">
-                  Location-wise Cashew Cards & Sourcing Banners
-                </h2>
-                <p className="text-xs text-brand-600 mt-0.5">
-                  Customers can browse harvests from regional origins ({dbLocations.join(', ')}). Maximum {dbLocations.length} unique banners allowed (1 per verified DB region).
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={openAddBanner}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-forest-700 hover:bg-forest-800 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                title="Open pop-up to configure and add a new location banner"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Location Banner</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Poster Dimensions Recommendation Callout */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-cream-100/70 border border-amber-200/80 text-xs text-amber-950 space-y-2.5 shadow-xs">
+            <div className="flex items-center gap-2 font-bold text-brand-950 text-sm">
+              <Sparkles className="w-4 h-4 text-amber-600" />
+              <span>Recommended Banner Poster Size & Display Quality</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/70">
+                <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-0.5">Recommended Dimensions</span>
+                <span className="font-mono text-sm font-bold text-brand-950">1200 × 500 px</span>
+                <p className="text-[11px] text-brand-600 mt-1">Wide landscape format (approx 2.4:1 ratio, min 1000px width).</p>
+              </div>
+              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/70">
+                <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-0.5">Mobile & Desktop Safe</span>
+                <span className="text-xs font-bold text-forest-800">Zero Distortion / No Shrinking</span>
+                <p className="text-[11px] text-brand-600 mt-1">Displays via responsive object-cover without squishing pixels or warping on any phone or screen.</p>
+              </div>
+              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/70">
+                <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-0.5">Composition Advice</span>
+                <span className="text-xs font-bold text-brand-900">Landscape Cashew Harvests</span>
+                <p className="text-[11px] text-brand-600 mt-1">Orchards, drying yards, or scenic plantations. High-contrast scrims ensure clear readability.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Empty State when no banners exist */}
+          {content.locationBanners.length === 0 ? (
+            <div className="p-8 sm:p-12 rounded-3xl border-2 border-dashed border-brand-200 bg-cream-50/50 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
+                <MapPin className="w-7 h-7" />
+              </div>
+              <div className="max-w-md mx-auto">
+                <h3 className="font-serif text-lg font-bold text-brand-950">
+                  No Regional Sourcing Banners
+                </h3>
+                <p className="text-xs text-brand-600 mt-1">
+                  The &ldquo;Coastal Harvest & Sourcing Regions&rdquo; banner section is completely hidden from visitors when 0 banners exist. Click below to add a regional harvest banner.
                 </p>
               </div>
-
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={addLocationCard}
-                  disabled={!canAddBanner}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-forest-700 hover:bg-forest-800 disabled:bg-brand-200 disabled:text-brand-400 disabled:cursor-not-allowed text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
-                  title={!canAddBanner ? `All ${dbLocations.length} database locations already have a banner card. No duplicates allowed.` : 'Add a new location banner to the top'}
+              <button
+                type="button"
+                onClick={openAddBanner}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-forest-700 hover:bg-forest-800 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add First Location Banner</span>
+              </button>
+            </div>
+          ) : (
+            /* Banners List with Reordering & Pop-up Edit Controls */
+            <div className="space-y-3.5">
+              {content.locationBanners.map((card, idx) => (
+                <div
+                  key={card.id || idx}
+                  className="rounded-2xl border border-brand-200 p-4 sm:p-5 bg-cream-50/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group hover:border-brand-400 hover:bg-cream-50 transition-all shadow-xs"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>{canAddBanner ? 'Add Location Card (at Top)' : 'All Locations Have Banners'}</span>
-                </button>
-              </div>
-            </div>
+                  {/* Thumbnail & Text Info */}
+                  <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+                    <div className="w-24 sm:w-32 h-16 sm:h-20 rounded-xl overflow-hidden bg-brand-900 shrink-0 border border-brand-200 shadow-2xs relative">
+                      {card.image ? (
+                        <img
+                          src={card.image}
+                          alt={card.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-brand-300 text-[10px]">
+                          No Photo
+                        </div>
+                      )}
+                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-black/70 text-white font-mono text-[9px] font-bold">
+                        #{idx + 1}
+                      </span>
+                    </div>
 
-            {/* Poster Dimensions Recommendation Callout */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-cream-100/70 border border-amber-200/80 text-xs text-amber-950 space-y-2.5 shadow-xs">
-              <div className="flex items-center gap-2 font-bold text-brand-950 text-sm">
-                <Sparkles className="w-4 h-4 text-amber-600" />
-                <span>Recommended Banner Poster Size & Display Quality</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
-                <div className="bg-white/80 p-3 rounded-xl border border-amber-200/70">
-                  <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-0.5">Recommended Dimensions</span>
-                  <span className="font-mono text-sm font-bold text-brand-950">1200 × 500 px</span>
-                  <p className="text-[11px] text-brand-600 mt-1">Wide landscape format (approx 2.4:1 ratio, min 1000px width).</p>
-                </div>
-                <div className="bg-white/80 p-3 rounded-xl border border-amber-200/70">
-                  <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-0.5">Mobile & Desktop Safe</span>
-                  <span className="text-xs font-bold text-forest-800">Zero Distortion / No Shrinking</span>
-                  <p className="text-[11px] text-brand-600 mt-1">Displays via responsive object-cover without squishing pixels or warping on any phone or screen.</p>
-                </div>
-                <div className="bg-white/80 p-3 rounded-xl border border-amber-200/70">
-                  <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-0.5">Composition Advice</span>
-                  <span className="text-xs font-bold text-brand-900">Landscape Cashew Harvests</span>
-                  <p className="text-[11px] text-brand-600 mt-1">Orchards, drying yards, or scenic plantations. High-contrast scrims ensure clear readability.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Banners List with Reordering Controls */}
-            <div className="space-y-4">
-              {content.locationBanners.map((card, idx) => {
-                // In dropdown, only allow this card's own key plus unassigned ones
-                const cardOptions = Array.from(new Set([card.locationKey, ...availableLocs])).filter(Boolean);
-
-                return (
-                  <div
-                    key={card.id || idx}
-                    className="rounded-2xl border border-brand-200 p-5 bg-cream-50/60 space-y-4 relative group hover:border-brand-400 transition-colors"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-brand-200/60">
+                    <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="w-6 h-6 rounded-full bg-brand-800 text-cream-50 text-xs font-bold flex items-center justify-center">
-                          {idx + 1}
-                        </span>
-                        <span className="text-xs font-bold text-brand-950">
+                        <span className="text-xs sm:text-sm font-bold text-brand-950 truncate">
                           {card.title || 'Untitled Location Banner'}
                         </span>
                         {card.locationKey && (
-                          <span className="text-[10px] font-semibold text-forest-800 bg-forest-50 px-2 py-0.5 rounded-full border border-forest-200">
+                          <span className="text-[10px] font-bold text-forest-800 bg-forest-50 px-2 py-0.5 rounded-full border border-forest-200">
                             📍 {card.locationKey}
                           </span>
                         )}
-                      </div>
-
-                      {/* Move Up, Move Down & Delete Controls */}
-                      <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                        <div className="flex items-center rounded-xl bg-white border border-brand-200 p-0.5 shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => moveLocationCardUp(idx)}
-                            disabled={idx === 0}
-                            className="p-1 rounded-lg hover:bg-cream-100 disabled:opacity-25 disabled:pointer-events-none text-brand-700 transition-colors"
-                            title="Move this banner earlier (higher priority)"
-                          >
-                            <ChevronUp className="w-4 h-4" />
-                          </button>
-                          <span className="text-[11px] font-mono font-bold text-brand-800 px-2">
-                            #{idx + 1}
+                        {card.tag && (
+                          <span className="text-[10px] text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full font-medium">
+                            {card.tag}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => moveLocationCardDown(idx)}
-                            disabled={idx === content.locationBanners.length - 1}
-                            className="p-1 rounded-lg hover:bg-cream-100 disabled:opacity-25 disabled:pointer-events-none text-brand-700 transition-colors"
-                            title="Move this banner later (lower priority)"
-                          >
-                            <ChevronDown className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => removeLocationCard(idx)}
-                          className="p-1.5 rounded-lg text-brand-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors"
-                          title="Remove this location banner"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        )}
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-[11px] font-bold text-brand-900 block mb-1">
-                          Origin Display Tag (Upper small text)
-                        </label>
-                        <input
-                          type="text"
-                          value={card.tag}
-                          onChange={(e) => updateLocationCard(idx, 'tag', e.target.value)}
-                          className="input-field text-xs py-2"
-                          placeholder="e.g. 100% Sourced in Goa & Karnataka"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-brand-900 block mb-1">
-                          Sourcing Region (Verified in DB, No Duplicates) <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          value={card.locationKey}
-                          onChange={(e) => updateLocationCard(idx, 'locationKey', e.target.value)}
-                          className="input-field text-xs py-2 bg-white font-semibold cursor-pointer"
-                        >
-                          {cardOptions.map((loc) => (
-                            <option key={loc} value={loc}>
-                              📍 {loc} {loc === card.locationKey ? '(Current)' : '(Available in DB)'}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-[10px] text-brand-500 mt-1">
-                          Strictly limited to unique plantation locations existing in active database products.
+                      {card.subtitle && (
+                        <p className="text-xs text-brand-600 line-clamp-1">
+                          {card.subtitle}
                         </p>
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-brand-900 block mb-1">
-                          Main Banner Title
-                        </label>
-                        <input
-                          type="text"
-                          value={card.title}
-                          onChange={(e) => updateLocationCard(idx, 'title', e.target.value)}
-                          className="input-field text-xs py-2"
-                          placeholder="e.g. Margao & Panaji Coastal Groves"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-brand-900 block mb-1">
-                          Subtitle / Regional Harvest Note
-                        </label>
-                        <input
-                          type="text"
-                          value={card.subtitle}
-                          onChange={(e) => updateLocationCard(idx, 'subtitle', e.target.value)}
-                          className="input-field text-xs py-2"
-                          placeholder="e.g. Sun-dried along the Konkan coast"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-brand-900 block mb-1">
-                          Button Label
-                        </label>
-                        <input
-                          type="text"
-                          value={card.linkText}
-                          onChange={(e) => updateLocationCard(idx, 'linkText', e.target.value)}
-                          className="input-field text-xs py-2"
-                          placeholder="e.g. Explore Goa Cashews"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-brand-200/50">
-                      <ImageUploadWidget
-                        label="Banner Background Photo (Recommended: 1200 × 500 px Landscape)"
-                        value={card.image}
-                        onChange={(url) => updateLocationCard(idx, 'image', url)}
-                        aspectRatio="wide"
-                        helpText="Select or upload an orchard or harvest photo (1200×500 px recommended). Responsive object-cover ensures it never gets stretched or distorted on mobile or desktop."
-                      />
+                      )}
+                      {card.linkText && (
+                        <p className="text-[11px] font-medium text-forest-700">
+                          Button: &ldquo;{card.linkText}&rdquo;
+                        </p>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            <div className="flex justify-end pt-4 border-t border-brand-100">
-              {renderSaveButton('Save Location Cards')}
+                  {/* Actions: Reorder, Edit Pop-up, Delete */}
+                  <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                    <div className="flex items-center rounded-xl bg-white border border-brand-200 p-0.5 shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => moveLocationCardUp(idx)}
+                        disabled={idx === 0}
+                        className="p-1.5 rounded-lg hover:bg-cream-100 disabled:opacity-25 disabled:pointer-events-none text-brand-700 transition-colors"
+                        title="Move banner earlier"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveLocationCardDown(idx)}
+                        disabled={idx === content.locationBanners.length - 1}
+                        className="p-1.5 rounded-lg hover:bg-cream-100 disabled:opacity-25 disabled:pointer-events-none text-brand-700 transition-colors"
+                        title="Move banner later"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openEditBanner(idx)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-forest-50 border border-brand-200 hover:border-forest-300 text-brand-900 hover:text-forest-800 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                      title="Edit this banner in pop-up modal"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-forest-700" />
+                      <span>Edit Banner</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => removeLocationCard(idx)}
+                      className="p-2 rounded-xl text-brand-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
+                      title="Remove this location banner"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
+          )}
+
+          <div className="flex justify-end pt-4 border-t border-brand-100">
+            {renderSaveButton('Save Location Cards')}
           </div>
-        );
-      })()}
+        </div>
+      )}
 
       {/* TAB 4: STORE LOCATION & CONTACT INFO */}
       {activeTab === 'contact' && (
@@ -1352,12 +1343,10 @@ export default function AdminContent() {
                 </div>
                 <p className="text-[10.5px] text-center text-brand-600 font-medium">
                   {content.contact.latitude && content.contact.longitude
-                    ? `Pinned at Lat: ${content.contact.latitude}, Lng: ${content.contact.longitude}`
+                    ? `Pinned at GPS: ${content.contact.latitude}, ${content.contact.longitude}`
                     : content.contact.googleMapsUrl
                       ? 'Live pin synced with custom Google Maps link'
-                      : content.contact.address
-                        ? `Live pin centered on ${content.contact.address.split(',')[0]}`
-                        : 'Enter your address to center map'}
+                      : 'Paste a Google Maps link or enter coordinates to center map'}
                 </p>
               </div>
 
@@ -1379,43 +1368,19 @@ export default function AdminContent() {
               </div>
 
               <div className="sm:col-span-2">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-brand-900 block">
-                    Full Physical Store Address
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleSearchPlace(content.contact.address)}
-                    disabled={searchingPlace}
-                    className="text-[11px] font-bold text-forest-700 hover:text-forest-900 flex items-center gap-1 underline cursor-pointer bg-forest-50 px-2.5 py-1 rounded-lg border border-forest-200 shadow-xs transition-colors"
-                    title="Geocode and update map pin to this address"
-                  >
-                    {searchingPlace ? <Loader2 className="w-3 h-3 animate-spin" /> : <LocateFixed className="w-3 h-3 text-forest-600" />}
-                    <span>{searchingPlace ? 'Geocoding...' : 'Sync Map to this Address'}</span>
-                  </button>
-                </div>
+                <label className="text-xs font-bold text-brand-900 block mb-1.5">
+                  Full Physical Store Address (Display Text on Website & Footer)
+                </label>
                 <textarea
                   rows={2}
                   value={content.contact.address || ''}
-                  onChange={(e) => {
-                    const newAddr = e.target.value;
-                    setContent((prev) => {
-                      const isOldGoa = (prev.contact.latitude === '15.2736' || prev.contact.latitude === '15.273612') &&
-                                       (prev.contact.longitude === '73.9582' || prev.contact.longitude === '73.958215');
-                      return {
-                        ...prev,
-                        contact: {
-                          ...prev.contact,
-                          address: newAddr,
-                          ...(isOldGoa ? { latitude: '', longitude: '' } : {}),
-                          googleMapsUrl: newAddr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(newAddr)}` : prev.contact.googleMapsUrl,
-                        },
-                      };
-                    });
-                  }}
+                  onChange={(e) => updateContact('address', e.target.value)}
                   className="input-field resize-none"
                   placeholder="e.g. Shop 5, Near Market, Margao, Goa 403601, India"
                 />
+                <p className="text-[11px] text-brand-500 mt-1">
+                  This text is strictly for visitors to read on your website and footer. It does not alter your Google Maps pin or navigation links.
+                </p>
               </div>
 
               <div>
@@ -1509,22 +1474,46 @@ export default function AdminContent() {
                 />
               </div>
 
+              {/* FSSAI Display Toggle */}
+              <div className="sm:col-span-2 p-4 rounded-2xl bg-cream-50/80 border border-brand-200/80 flex items-center justify-between gap-4">
+                <div>
+                  <span className="text-xs font-bold text-brand-950 block">Show FSSAI License Badge on Website</span>
+                  <span className="text-[11px] text-brand-600 block mt-0.5">
+                    Controls whether the FSSAI certification badge and license number are shown on the website footer and product pages.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateContact('showFssai', !(content.contact.showFssai ?? false))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer shrink-0 ${
+                    content.contact.showFssai ? 'bg-forest-700' : 'bg-brand-300'
+                  }`}
+                  title="Toggle FSSAI display on website"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      content.contact.showFssai ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
               <div>
                 <label className="text-xs font-bold text-brand-900 block mb-1.5">
-                  FSSAI License Number
+                  FSSAI License Number <span className="text-brand-400 font-normal">(Optional)</span>
                 </label>
                 <input
                   type="text"
                   value={content.contact.fssaiNumber || ''}
                   onChange={(e) => updateContact('fssaiNumber', e.target.value)}
                   className="input-field font-mono"
-                  placeholder="10020021000123"
+                  placeholder="e.g. 10020021000123 (Leave blank to hide)"
                 />
               </div>
 
               <div className="sm:col-span-2">
                 <label className="text-xs font-bold text-brand-900 block mb-1.5">
-                  FSSAI Certificate Description Text
+                  FSSAI Certificate Description Text <span className="text-brand-400 font-normal">(Optional)</span>
                 </label>
                 <input
                   type="text"
@@ -1689,6 +1678,272 @@ export default function AdminContent() {
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {/* LOCATION BANNER POP-UP MODAL */}
+      {bannerModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fade-in"
+          onClick={() => setBannerModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl border border-brand-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4.5 border-b border-brand-200/80 flex items-center justify-between bg-gradient-to-r from-cream-50 to-white">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-forest-100 text-forest-800">
+                  <MapPin className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-brand-950">
+                    {editingBannerIndex === null ? 'Add Sourcing Region Banner' : `Edit Sourcing Banner: ${bannerForm.locationKey || 'Regional Card'}`}
+                  </h3>
+                  <p className="text-xs text-brand-600">
+                    Configure the photo, region title, origin badge, and preview it before publishing.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBannerModalOpen(false)}
+                className="p-2 rounded-xl text-brand-400 hover:text-brand-900 hover:bg-cream-100 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: Split view (Left Form, Right Live Preview) */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Left: Input Fields */}
+                <div className="lg:col-span-7 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    
+                    {/* Sourcing Region Key */}
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-bold text-brand-900 block mb-1">
+                        Sourcing Region / Origin Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={bannerForm.locationKey}
+                          onChange={(e) => setBannerForm((b) => ({ ...b, locationKey: e.target.value }))}
+                          placeholder="e.g. Goa, Karnataka, Konkan, etc."
+                          className="input-field text-xs font-semibold flex-1"
+                        />
+                        {dbLocations.length > 0 && (
+                          <select
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                setBannerForm((b) => ({ ...b, locationKey: e.target.value }));
+                              }
+                            }}
+                            value=""
+                            className="text-xs rounded-xl border border-brand-200 bg-cream-50 px-3 py-2 text-brand-800 font-medium shrink-0 cursor-pointer"
+                            title="Quick pick from existing product origins"
+                          >
+                            <option value="">Select from DB...</option>
+                            {dbLocations.map((loc) => (
+                              <option key={loc} value={loc}>
+                                📍 {loc}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                      <p className="text-[10.5px] text-brand-500 mt-1">
+                        Region name displayed on the card and filter tabs (e.g. Goa, Karnataka).
+                      </p>
+                    </div>
+
+                    {/* Origin Display Tag */}
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-bold text-brand-900 block mb-1">
+                        Origin Display Tag (Upper Badge)
+                      </label>
+                      <input
+                        type="text"
+                        value={bannerForm.tag}
+                        onChange={(e) => setBannerForm((b) => ({ ...b, tag: e.target.value }))}
+                        placeholder="e.g. 100% Sourced in Goa & Karnataka"
+                        className="input-field text-xs"
+                      />
+                    </div>
+
+                    {/* Main Banner Title */}
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-bold text-brand-900 block mb-1">
+                        Main Banner Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={bannerForm.title}
+                        onChange={(e) => setBannerForm((b) => ({ ...b, title: e.target.value }))}
+                        placeholder="e.g. Margao & Panaji Coastal Groves"
+                        className="input-field text-xs font-semibold"
+                      />
+                    </div>
+
+                    {/* Subtitle */}
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-bold text-brand-900 block mb-1">
+                        Subtitle / Regional Harvest Story
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={bannerForm.subtitle}
+                        onChange={(e) => setBannerForm((b) => ({ ...b, subtitle: e.target.value }))}
+                        placeholder="e.g. Artisanal sun-drying along the Konkan coastline with rich buttery undertones."
+                        className="input-field text-xs resize-none"
+                      />
+                    </div>
+
+                    {/* Button Text */}
+                    <div className="sm:col-span-2">
+                      <label className="text-xs font-bold text-brand-900 block mb-1">
+                        Call-to-Action Button Label
+                      </label>
+                      <input
+                        type="text"
+                        value={bannerForm.linkText}
+                        onChange={(e) => setBannerForm((b) => ({ ...b, linkText: e.target.value }))}
+                        placeholder="e.g. Explore Goa Cashews"
+                        className="input-field text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Banner Photo Widget */}
+                  <div className="pt-2">
+                    <ImageUploadWidget
+                      label="Banner Background Photo (Recommended: 1200 × 500 px Landscape)"
+                      value={bannerForm.image}
+                      onChange={(url) => setBannerForm((b) => ({ ...b, image: url }))}
+                      aspectRatio="wide"
+                      helpText="Choose from presets or upload high-resolution orchard/harvest landscape photography."
+                    />
+                  </div>
+                </div>
+
+                {/* Right: Live Interactive Card Preview */}
+                <div className="lg:col-span-5 flex flex-col space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-brand-900">
+                    <Eye className="w-4 h-4 text-forest-700" />
+                    <span>Live Customer View Preview</span>
+                  </div>
+
+                  <div className="rounded-2xl border-2 border-brand-200 overflow-hidden shadow-md bg-brand-950 text-white relative min-h-[260px] flex flex-col justify-end p-5">
+                    {/* Background Image */}
+                    {bannerForm.image ? (
+                      <img
+                        src={bannerForm.image}
+                        alt={bannerForm.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-brand-900 via-brand-950 to-forest-950 flex items-center justify-center text-brand-400 text-xs">
+                        No image selected
+                      </div>
+                    )}
+                    {/* Dark gradient scrim for legibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent pointer-events-none" />
+
+                    {/* Content overlay */}
+                    <div className="relative z-10 space-y-2">
+                      {bannerForm.tag && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/90 text-brand-950 text-[10px] font-bold tracking-wide uppercase">
+                          <Sparkles className="w-2.5 h-2.5" />
+                          <span>{bannerForm.tag}</span>
+                        </span>
+                      )}
+                      <h4 className="font-serif text-lg font-bold text-white drop-shadow-sm leading-snug">
+                        {bannerForm.title || 'Regional Harvest Title'}
+                      </h4>
+                      {bannerForm.subtitle && (
+                        <p className="text-xs text-cream-100/90 line-clamp-2">
+                          {bannerForm.subtitle}
+                        </p>
+                      )}
+                      <div className="pt-2">
+                        <span className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-cream-50 text-brand-950 text-xs font-bold shadow-sm">
+                          <span>{bannerForm.linkText || 'Explore Harvest'}</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] text-amber-900">
+                    <p className="font-bold mb-0.5">Preview Note:</p>
+                    <p>This shows exactly how the banner renders on the storefront in the &ldquo;Coastal Harvest & Sourcing Regions&rdquo; slider.</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-brand-200 bg-cream-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setBannerModalOpen(false)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-brand-200 bg-white hover:bg-cream-100 text-brand-700 text-xs font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleSaveBannerModal(false)}
+                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl border border-forest-600 bg-white hover:bg-forest-50 text-forest-800 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  Save to Drafts
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveBannerModal(true)}
+                  disabled={saving}
+                  className="flex-1 sm:flex-initial btn-primary px-6 py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-md disabled:opacity-60 cursor-pointer"
+                >
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>Save & Publish Live</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating In-App Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl text-xs font-bold transition-all animate-slide-up border ${
+            toast.type === 'error'
+              ? 'bg-red-50 border-red-200 text-red-800'
+              : toast.type === 'info'
+              ? 'bg-amber-50 border-amber-200 text-amber-900'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+          }`}
+        >
+          {toast.type === 'error' ? (
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="p-1 rounded-lg hover:bg-black/5 text-brand-400 hover:text-brand-900 ml-2"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>

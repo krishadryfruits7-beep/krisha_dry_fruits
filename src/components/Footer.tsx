@@ -199,21 +199,25 @@ export default function Footer({ onNavigate }: FooterProps) {
               </li>
             </ul>
 
-            <div className="mt-5 p-3 rounded-xl bg-brand-900/60 border border-brand-800 text-[11px] text-cream-300">
-              <div className="font-semibold text-cream-100 flex items-center gap-1.5 mb-0.5">
-                <Leaf className="w-3.5 h-3.5 text-forest-400" />
-                <span>FSSAI Lic: {contact.fssaiNumber}</span>
+            {contact.showFssai !== false && Boolean(contact.fssaiNumber?.trim()) && (
+              <div className="mt-5 p-3 rounded-xl bg-brand-900/60 border border-brand-800 text-[11px] text-cream-300">
+                <div className="font-semibold text-cream-100 flex items-center gap-1.5 mb-0.5">
+                  <Leaf className="w-3.5 h-3.5 text-forest-400" />
+                  <span>FSSAI Lic: {contact.fssaiNumber}</span>
+                </div>
+                {contact.fssaiText && <p>{contact.fssaiText}</p>}
               </div>
-              <p>{contact.fssaiText}</p>
-            </div>
+            )}
           </div>
         </div>
 
         {/* Bottom Line */}
         <div className="mt-12 pt-6 border-t border-brand-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-cream-400/80">
-          <p>© {new Date().getFullYear()} Krisha Dry Fruits. All rights reserved.</p>
-          <div className="flex items-center gap-3">
-            <span>Goa & Karnataka Harvest</span>
+          <p>© {new Date().getFullYear()} Krisha Dry Fruits (krishadryfruits.in). All rights reserved.</p>
+          <div className="flex items-center gap-3 flex-wrap justify-center text-[11px] text-cream-400/90">
+            <span>Dry Fruits Shop in Yeshwanthpur, Bengaluru</span>
+            <span>•</span>
+            <span>Goa &amp; Karnataka Harvests</span>
             <span>•</span>
             <span>Pan-India Air Dispatch</span>
           </div>

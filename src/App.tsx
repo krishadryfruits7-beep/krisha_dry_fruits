@@ -221,6 +221,60 @@ function App() {
     setCartOpen(false);
   }, [page]);
 
+  // Dynamic SEO Title, Description, and Canonical Link based on current page
+  useEffect(() => {
+    let title = 'Krisha Dry Fruits | Premium Dry Fruits & Cashews Shop in Yeshwanthpur, Bangalore';
+    let desc = 'Krisha Dry Fruits — Top-rated dry fruits shop in Yeshwanthpur, Bangalore. Pure coastal harvest cashews (W180, W210, W240, W320, W450), California almonds, walnuts, and raisins.';
+    let canonical = 'https://krishadryfruits.in/';
+
+    switch (page) {
+      case 'products':
+        title = 'Buy Premium Cashews & Dry Fruits Online | Krisha Dry Fruits Yeshwanthpur';
+        desc = 'Browse full selection of premium whole cashews (W180, W210, W240, W320, W450), roasted, salted, and raw nuts from Krisha Dry Fruits, Yeshwanthpur, Bangalore.';
+        canonical = 'https://krishadryfruits.in/products';
+        break;
+      case 'grades':
+        title = 'Cashew Grades Guide (W180 to W450) | Krisha Dry Fruits';
+        desc = 'Understand cashew nut grading standards: W180 King Cashews, W210 Jumbo, W240 Premium, and W320 Classic. Discover count per pound and quality metrics.';
+        canonical = 'https://krishadryfruits.in/grades';
+        break;
+      case 'about':
+        title = 'About Krisha Dry Fruits | Direct Orchard Sourcing & Pure Heritage';
+        desc = 'Learn about our passion for coastal cashew harvests and farm-direct quality. No artificial polishing or chemical processing.';
+        canonical = 'https://krishadryfruits.in/about';
+        break;
+      case 'contact':
+        title = 'Contact & Store Location Yeshwanthpur | Krisha Dry Fruits Bangalore';
+        desc = 'Visit Krisha Dry Fruits physical store in Yeshwanthpur, Bengaluru. Get 1-click Google Maps directions, customer support helpline, and store timings.';
+        canonical = 'https://krishadryfruits.in/contact';
+        break;
+      case 'product':
+        if (selectedProduct) {
+          title = `${selectedProduct.title || selectedProduct.grade} Cashews | Krisha Dry Fruits`;
+          desc = `Buy authentic ${selectedProduct.grade} grade cashews (${selectedProduct.variety || 'Raw/Whole'}) from Krisha Dry Fruits, Yeshwanthpur, Bangalore. Freshly packed with 1-click checkout.`;
+          canonical = `https://krishadryfruits.in/product?id=${(selectedProduct as any)._id || selectedProduct.id}`;
+        }
+        break;
+      case 'myorders':
+        title = 'My Orders & Real-Time Tracking | Krisha Dry Fruits';
+        canonical = 'https://krishadryfruits.in/myorders';
+        break;
+    }
+
+    document.title = title;
+
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute('content', desc);
+
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.setAttribute('href', canonical);
+  }, [page, selectedProduct]);
+
   const availableGrades = Array.from(
     new Set(products.filter((p) => p.active !== false).map((p) => (p.grade || '').trim().toUpperCase()).filter(Boolean))
   );

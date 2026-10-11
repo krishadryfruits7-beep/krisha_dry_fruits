@@ -187,7 +187,7 @@ export const handler: Handler = async (event) => {
       announcement: doc.announcement ?? DEFAULT_SITE_CONTENT.announcement,
       hero: { ...DEFAULT_SITE_CONTENT.hero, ...(doc.hero || {}) },
       features: Array.isArray(doc.features) && doc.features.length > 0 ? doc.features : DEFAULT_SITE_CONTENT.features,
-      locationBanners: Array.isArray(doc.locationBanners) && doc.locationBanners.length > 0 ? doc.locationBanners : DEFAULT_SITE_CONTENT.locationBanners,
+      locationBanners: Array.isArray(doc.locationBanners) ? doc.locationBanners : [],
       contact: { ...DEFAULT_SITE_CONTENT.contact, ...(doc.contact || {}) },
       social: { ...DEFAULT_SITE_CONTENT.social, ...(doc.social || {}) },
       footerBio: doc.footerBio ?? DEFAULT_SITE_CONTENT.footerBio,

@@ -107,27 +107,16 @@ export default function GradeSelectorSection({
     });
   })();
 
-  const locationBanners = content.locationBanners && content.locationBanners.length > 0
-    ? content.locationBanners
-    : [
-        {
-          id: 'loc-1',
-          tag: '100% Sourced in Goa & Karnataka',
-          locationKey: 'Goa & Karnataka',
-          title: 'Explore Entire Premium Collection',
-          subtitle: 'Sun-dried along the coastal orchards with delicate buttery crunch',
-          image: '/hero_cashew_bowl.jpg',
-          linkText: 'View All Cashews',
-        },
-      ];
-
+  const locationBanners = content.locationBanners || [];
   const totalBanners = locationBanners.length;
 
   const nextSlide = () => {
+    if (totalBanners === 0) return;
     setActiveSlide((prev) => (prev + 1) % totalBanners);
   };
 
   const prevSlide = () => {
+    if (totalBanners === 0) return;
     setActiveSlide((prev) => (prev - 1 + totalBanners) % totalBanners);
   };
 
@@ -268,14 +257,15 @@ export default function GradeSelectorSection({
         )}
 
         {/* Location-wise Cashew Section Header */}
-        <div className="mt-8 sm:mt-12">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-forest-600" />
-              <span className="text-[11px] sm:text-xs uppercase tracking-[0.2em] font-bold text-brand-600">
-                Coastal Harvest & Sourcing Regions
-              </span>
-            </div>
+        {totalBanners > 0 && currentBanner && (
+          <div className="mt-8 sm:mt-12">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-forest-600" />
+                <span className="text-[11px] sm:text-xs uppercase tracking-[0.2em] font-bold text-brand-600">
+                  Coastal Harvest & Sourcing Regions
+                </span>
+              </div>
 
             {totalBanners > 1 && (
               <span className="text-xs font-semibold text-brand-500 hidden sm:inline-block">
@@ -456,6 +446,7 @@ export default function GradeSelectorSection({
             </div>
           </div>
         </div>
+      )}
 
       </div>
     </section>

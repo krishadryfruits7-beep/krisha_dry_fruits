@@ -3,6 +3,7 @@ import { Star, ArrowLeft, Plus, Minus, Check, ShoppingBag, Truck, ShieldCheck, C
 import type { Product, CashewType, Quantity } from '@/types';
 import { formatPrice } from '@/data';
 import { useCart } from '@/cart-context';
+import { useSiteContent } from '@/site-content';
 
 interface ProductDetailProps {
   product: Product;
@@ -32,6 +33,7 @@ export default function ProductDetail({
   onSelectProduct,
 }: ProductDetailProps) {
   const { addItem } = useCart();
+  const siteContent = useSiteContent();
 
   const firstType = product.types[0];
   const [selectedType, setSelectedType] = useState<CashewType>(firstType?.type as CashewType);
@@ -387,7 +389,11 @@ export default function ProductDetail({
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-brand-950">FSSAI Certified</div>
+                <div className="text-xs font-bold text-brand-950">
+                  {siteContent.contact?.showFssai !== false && Boolean(siteContent.contact?.fssaiNumber?.trim())
+                    ? 'FSSAI Certified'
+                    : 'Quality Assured'}
+                </div>
                 <div className="text-[10px] text-brand-500">100% Quality Guarantee</div>
               </div>
             </div>
