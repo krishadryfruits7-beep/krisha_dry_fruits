@@ -8,7 +8,8 @@ import './index.css';
 
 const CLERK_KEY =
   (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string) ||
-  'pk_test_YmlnLWxpemFyZC01NTMyLmNsZXJrLmFjY291bnRzLmRldiQ';
+  (import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY as string) ||
+  'pk_test_ZXRoaWNhbC1pYmV4LTI2NTguY2xlcmsuYWNjb3VudHMuZGV2JA';
 
 function Root() {
   const [isAdmin, setIsAdmin] = useState(() =>

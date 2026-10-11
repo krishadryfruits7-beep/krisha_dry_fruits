@@ -7,6 +7,7 @@ const projectRoot = fileURLToPath(new URL('.', import.meta.url));
 // https://vitejs.dev/config/
 export default defineConfig({
   root: projectRoot,
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   plugins: [react()],
   resolve: {
     alias: {
