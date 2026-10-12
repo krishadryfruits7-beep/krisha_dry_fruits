@@ -25,6 +25,18 @@ export interface HeroContent {
   image: string;
 }
 
+export interface HeroSlide {
+  id: string;
+  badge: string;
+  titleLine1: string;
+  titleLine2: string;
+  titleHighlight: string;
+  subtitle: string;
+  buttonText: string;
+  buttonLink?: string;
+  image: string;
+}
+
 export interface ContactInfo {
   phone: string;
   extraPhone?: string;
@@ -51,6 +63,7 @@ export interface SocialLinks {
 export interface SiteContent {
   announcement: string;
   hero: HeroContent;
+  heroSlides?: HeroSlide[];
   features: FeatureItem[];
   locationBanners: LocationBanner[];
   contact: ContactInfo;
@@ -69,6 +82,18 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     buttonText: 'Shop Now',
     image: '/hero_cashew_bowl.jpg',
   },
+  heroSlides: [
+    {
+      id: 'slide-cashews-1',
+      badge: "India's Premium Cashew Brand",
+      titleLine1: 'Cashews,',
+      titleLine2: 'crafted to',
+      titleHighlight: 'perfection.',
+      subtitle: 'From the sun-drenched coast of Goa to your home — hand-sorted, freshly packed, and available in hand-curated premium grades.',
+      buttonText: 'Shop Now',
+      image: '/hero_cashew_bowl.jpg',
+    },
+  ],
   features: [
     { id: '1', iconName: 'Leaf', title: '100%', subtitle: 'Natural' },
     { id: '2', iconName: 'Award', title: 'Premium', subtitle: 'Quality' },

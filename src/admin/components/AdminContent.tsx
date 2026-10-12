@@ -32,6 +32,8 @@ import {
   Copy,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Pencil,
   X,
   ArrowRight,
@@ -43,6 +45,7 @@ import {
   resetSiteContent,
   type SiteContent,
   type LocationBanner,
+  type HeroSlide,
   type FeatureItem,
   DEFAULT_SITE_CONTENT,
   getStoreGoogleMapsUrl,
@@ -76,6 +79,21 @@ export default function AdminContent() {
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [pastedLink, setPastedLink] = useState('');
 
+  // Hero Carousel Modal & Preview State
+  const [heroModalOpen, setHeroModalOpen] = useState(false);
+  const [editingHeroIndex, setEditingHeroIndex] = useState<number | null>(null);
+  const [heroForm, setHeroForm] = useState<HeroSlide>({
+    id: '',
+    badge: "India's Premium Cashew Brand",
+    titleLine1: 'Cashews,',
+    titleLine2: 'crafted to',
+    titleHighlight: 'perfection.',
+    subtitle: 'From the sun-drenched coast of Goa to your home — hand-sorted, freshly packed, and available in hand-curated premium grades.',
+    buttonText: 'Shop Now',
+    image: '/hero_cashew_bowl.jpg',
+  });
+  const [previewHeroIdx, setPreviewHeroIdx] = useState(0);
+
   // Location Banner Pop-up Modal State
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
   const [editingBannerIndex, setEditingBannerIndex] = useState<number | null>(null);
@@ -103,15 +121,24 @@ export default function AdminContent() {
     api.content.get()
       .then((remote) => {
         if (remote && !remote.error) {
-          setContent((prev) => ({
-            ...prev,
-            ...remote,
-            hero: { ...prev.hero, ...(remote.hero || {}) },
-            contact: { ...prev.contact, ...(remote.contact || {}) },
-            social: { ...prev.social, ...(remote.social || {}) },
-            features: Array.isArray(remote.features) && remote.features.length > 0 ? remote.features : prev.features,
-            locationBanners: Array.isArray(remote.locationBanners) ? remote.locationBanners : prev.locationBanners,
-          }));
+          setContent((prev) => {
+            const resolvedHeroSlides = Array.isArray(remote.heroSlides) && remote.heroSlides.length > 0
+              ? remote.heroSlides
+              : (Array.isArray(prev.heroSlides) && prev.heroSlides.length > 0
+                ? prev.heroSlides
+                : [{ id: 'hero-1', ...(remote.hero || prev.hero) }]);
+
+            return {
+              ...prev,
+              ...remote,
+              hero: { ...prev.hero, ...(remote.hero || {}) },
+              heroSlides: resolvedHeroSlides,
+              contact: { ...prev.contact, ...(remote.contact || {}) },
+              social: { ...prev.social, ...(remote.social || {}) },
+              features: Array.isArray(remote.features) && remote.features.length > 0 ? remote.features : prev.features,
+              locationBanners: Array.isArray(remote.locationBanners) ? remote.locationBanners : prev.locationBanners,
+            };
+          });
         }
       })
       .catch(() => {});
@@ -442,6 +469,161 @@ export default function AdminContent() {
     });
   };
 
+  // Hero Carousel Modal & Slide Controls
+  const currentHeroSlides: HeroSlide[] =
+    Array.isArray(content.heroSlides) && content.heroSlides.length > 0
+      ? content.heroSlides
+      : [
+          {
+            id: 'hero-1',
+            badge: content.hero.badge,
+            titleLine1: content.hero.titleLine1,
+            titleLine2: content.hero.titleLine2,
+            titleHighlight: content.hero.titleHighlight,
+            subtitle: content.hero.subtitle,
+            buttonText: content.hero.buttonText,
+            image: content.hero.image,
+          },
+        ];
+
+  const openAddHeroSlide = () => {
+    setEditingHeroIndex(null);
+    setHeroForm({
+      id: `hero-${Date.now()}`,
+      badge: "India's Premium Cashew Brand",
+      titleLine1: 'Pure & Organic,',
+      titleLine2: 'handpicked from',
+      titleHighlight: 'pristine orchards.',
+      subtitle: 'Sun-drenched whole cashew nuts and California almonds, sorted and sealed within 48h of harvest.',
+      buttonText: 'Shop Now',
+      image: '/hero_cashew_bowl.jpg',
+    });
+    setHeroModalOpen(true);
+  };
+
+  const openEditHeroSlide = (index: number) => {
+    const slide = currentHeroSlides[index];
+    if (!slide) return;
+    setEditingHeroIndex(index);
+    setHeroForm({ ...slide });
+    setHeroModalOpen(true);
+  };
+
+  const handleSaveHeroModal = async (publishLive: boolean = false) => {
+    if (!heroForm.titleLine1.trim()) {
+      showToast('Please enter Headline Line 1 for the banner.', 'error');
+      return;
+    }
+
+    let nextSlides: HeroSlide[];
+    if (editingHeroIndex === null) {
+      nextSlides = [...currentHeroSlides, heroForm];
+    } else {
+      nextSlides = [...currentHeroSlides];
+      nextSlides[editingHeroIndex] = heroForm;
+    }
+
+    const first = nextSlides[0];
+    const nextContent: SiteContent = {
+      ...content,
+      heroSlides: nextSlides,
+      hero: {
+        badge: first.badge,
+        titleLine1: first.titleLine1,
+        titleLine2: first.titleLine2,
+        titleHighlight: first.titleHighlight,
+        subtitle: first.subtitle,
+        buttonText: first.buttonText,
+        image: first.image,
+      },
+    };
+
+    setContent(nextContent);
+    setHeroModalOpen(false);
+
+    if (publishLive) {
+      setSaving(true);
+      saveSiteContent(nextContent);
+      try {
+        await adminApi.content.update(nextContent);
+        showToast('Hero banner saved and published live to cloud!', 'success');
+      } catch (err) {
+        showToast('Saved locally. Cloud sync pending.', 'info');
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      showToast('Hero banner saved. Click "Apply Hero Changes" to publish.', 'success');
+    }
+  };
+
+  const moveHeroSlideUp = (index: number) => {
+    if (index <= 0) return;
+    const copy = [...currentHeroSlides];
+    const temp = copy[index];
+    copy[index] = copy[index - 1];
+    copy[index - 1] = temp;
+    const first = copy[0];
+    setContent((prev) => ({
+      ...prev,
+      heroSlides: copy,
+      hero: {
+        badge: first.badge,
+        titleLine1: first.titleLine1,
+        titleLine2: first.titleLine2,
+        titleHighlight: first.titleHighlight,
+        subtitle: first.subtitle,
+        buttonText: first.buttonText,
+        image: first.image,
+      },
+    }));
+  };
+
+  const moveHeroSlideDown = (index: number) => {
+    if (index >= currentHeroSlides.length - 1) return;
+    const copy = [...currentHeroSlides];
+    const temp = copy[index];
+    copy[index] = copy[index + 1];
+    copy[index + 1] = temp;
+    const first = copy[0];
+    setContent((prev) => ({
+      ...prev,
+      heroSlides: copy,
+      hero: {
+        badge: first.badge,
+        titleLine1: first.titleLine1,
+        titleLine2: first.titleLine2,
+        titleHighlight: first.titleHighlight,
+        subtitle: first.subtitle,
+        buttonText: first.buttonText,
+        image: first.image,
+      },
+    }));
+  };
+
+  const removeHeroSlide = (index: number) => {
+    if (currentHeroSlides.length <= 1) {
+      showToast('Storefront requires at least 1 hero banner.', 'error');
+      return;
+    }
+    const filtered = currentHeroSlides.filter((_, i) => i !== index);
+    const first = filtered[0];
+    setContent((prev) => ({
+      ...prev,
+      heroSlides: filtered,
+      hero: {
+        badge: first.badge,
+        titleLine1: first.titleLine1,
+        titleLine2: first.titleLine2,
+        titleHighlight: first.titleHighlight,
+        subtitle: first.subtitle,
+        buttonText: first.buttonText,
+        image: first.image,
+      },
+    }));
+    showToast('Hero banner removed.', 'info');
+  };
+
   // Location Banner Modal Controls
   const openAddBanner = () => {
     const defaultRegion = dbLocations[0] || 'Goa';
@@ -662,101 +844,124 @@ export default function AdminContent() {
               </div>
             </div>
 
-            <h2 className="font-serif text-lg font-bold text-brand-950 border-b border-brand-100 pb-3 flex items-center gap-2 pt-2">
-              <Sparkles className="w-4 h-4 text-brand-600" />
-              <span>Hero Copywriting & Headings</span>
-            </h2>
+            {/* Dedicated Hero Banners & Slider Section */}
+            <div className="pt-2 border-t border-brand-100 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-serif text-lg font-bold text-brand-950 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-brand-600" />
+                    <span>Storefront Hero Banners & Carousel</span>
+                  </h2>
+                  <p className="text-xs text-brand-600 mt-0.5">
+                    {currentHeroSlides.length <= 1
+                      ? 'Currently 1 banner active. Indicator dots are hidden on storefront for a clean aesthetic.'
+                      : `${currentHeroSlides.length} banners active. Visitors can swipe or click between banners with dynamic indicator dots.`}
+                  </p>
+                </div>
 
-            {/* Pill Badge */}
-            <div>
-              <label className="text-xs font-bold text-brand-900 block mb-1.5">
-                Floating Pill Badge Text
-              </label>
-              <input
-                type="text"
-                value={content.hero.badge}
-                onChange={(e) => updateHero('badge', e.target.value)}
-                className="input-field"
-                placeholder="e.g. India's Premium Cashew Brand"
-              />
-            </div>
+                <button
+                  type="button"
+                  onClick={openAddHeroSlide}
+                  className="btn-primary py-2.5 px-4 text-xs font-bold inline-flex items-center gap-2 shadow-sm rounded-xl cursor-pointer self-start sm:self-auto shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Hero Banner</span>
+                </button>
+              </div>
 
-            {/* Headline Breakdown */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-xs font-bold text-brand-900 block mb-1.5">
-                  Headline Line 1
-                </label>
-                <input
-                  type="text"
-                  value={content.hero.titleLine1}
-                  onChange={(e) => updateHero('titleLine1', e.target.value)}
-                  className="input-field"
-                  placeholder="Cashews,"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-brand-900 block mb-1.5">
-                  Headline Line 2
-                </label>
-                <input
-                  type="text"
-                  value={content.hero.titleLine2}
-                  onChange={(e) => updateHero('titleLine2', e.target.value)}
-                  className="input-field"
-                  placeholder="crafted to"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-brand-900 block mb-1.5">
-                  Headline Highlight (Italic)
-                </label>
-                <input
-                  type="text"
-                  value={content.hero.titleHighlight}
-                  onChange={(e) => updateHero('titleHighlight', e.target.value)}
-                  className="input-field"
-                  placeholder="perfection."
-                />
-              </div>
-            </div>
+              {/* List of active Hero Banners */}
+              <div className="space-y-3">
+                {currentHeroSlides.map((slide, idx) => (
+                  <div
+                    key={slide.id || idx}
+                    className="p-4 rounded-2xl border border-brand-200/80 bg-cream-50/60 hover:bg-white hover:border-brand-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      {/* Image Thumbnail */}
+                      <div className="relative w-16 h-14 sm:w-20 sm:h-16 rounded-xl overflow-hidden border border-brand-200 bg-white shrink-0">
+                        <img
+                          src={slide.image || '/hero_cashew_bowl.jpg'}
+                          alt={slide.titleLine1 || 'Banner'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = '/hero_cashew_bowl.jpg';
+                          }}
+                        />
+                        <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] font-bold text-white text-center py-0.5">
+                          #{idx + 1}
+                        </span>
+                      </div>
 
-            {/* Subtitle */}
-            <div>
-              <label className="text-xs font-bold text-brand-900 block mb-1.5">
-                Sub-heading Description
-              </label>
-              <textarea
-                rows={3}
-                value={content.hero.subtitle}
-                onChange={(e) => updateHero('subtitle', e.target.value)}
-                className="input-field resize-none"
-                placeholder="From the sun-drenched coast of Goa to your home..."
-              />
-            </div>
+                      {/* Content summary */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-100 text-brand-900 border border-brand-200/60">
+                            {idx === 0 ? 'Primary / Default Banner' : `Banner #${idx + 1}`}
+                          </span>
+                          {slide.badge && (
+                            <span className="text-[10px] font-semibold text-forest-700 bg-forest-50 px-2 py-0.5 rounded-full border border-forest-200/50 truncate max-w-[150px]">
+                              {slide.badge}
+                            </span>
+                          )}
+                        </div>
 
-            {/* Button text & Hero Image */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-bold text-brand-900 block mb-1.5">
-                  Primary Button Text
-                </label>
-                <input
-                  type="text"
-                  value={content.hero.buttonText}
-                  onChange={(e) => updateHero('buttonText', e.target.value)}
-                  className="input-field"
-                  placeholder="Shop Now"
-                />
-              </div>
-              <div className="sm:col-span-2 pt-2 border-t border-brand-100">
-                <ImageUploadWidget
-                  label="Storefront Hero Image"
-                  value={content.hero.image}
-                  onChange={(url) => updateHero('image', url)}
-                  aspectRatio="landscape"
-                  helpText="Select an image from your computer to upload directly to Cloudinary for the hero background."
-                />
+                        <h3 className="font-serif text-sm font-bold text-brand-950 truncate leading-snug">
+                          {slide.titleLine1} {slide.titleLine2} <span className="italic font-normal text-brand-700">{slide.titleHighlight}</span>
+                        </h3>
+
+                        <p className="text-[11px] text-brand-700/80 truncate mt-0.5">
+                          {slide.subtitle || 'No sub-heading'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                      {/* Move Up */}
+                      <button
+                        type="button"
+                        onClick={() => moveHeroSlideUp(idx)}
+                        disabled={idx === 0}
+                        title="Move Up"
+                        className="p-2 rounded-xl border border-brand-200 bg-white hover:bg-cream-100 text-brand-600 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Move Down */}
+                      <button
+                        type="button"
+                        onClick={() => moveHeroSlideDown(idx)}
+                        disabled={idx === currentHeroSlides.length - 1}
+                        title="Move Down"
+                        className="p-2 rounded-xl border border-brand-200 bg-white hover:bg-cream-100 text-brand-600 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Edit */}
+                      <button
+                        type="button"
+                        onClick={() => openEditHeroSlide(idx)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-brand-300 bg-white hover:bg-brand-50 text-brand-900 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                      >
+                        <Pencil className="w-3 h-3 text-brand-600" />
+                        <span>Edit</span>
+                      </button>
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => removeHeroSlide(idx)}
+                        disabled={currentHeroSlides.length <= 1}
+                        title={currentHeroSlides.length <= 1 ? 'Storefront requires at least 1 hero banner' : 'Delete Banner'}
+                        className="p-2 rounded-xl border border-red-200 bg-white hover:bg-red-50 text-red-600 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -764,36 +969,91 @@ export default function AdminContent() {
           {/* Live Preview Card */}
           <div className="bg-cream-50 rounded-3xl p-6 shadow-luxury border border-brand-200/60 flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-500 mb-3">
-                <Eye className="w-3.5 h-3.5" />
-                <span>Live Hero Preview</span>
-              </div>
-              <div className="relative rounded-2xl overflow-hidden border border-brand-200 bg-white aspect-[4/3] shadow-sm mb-4">
-                <img
-                  src={content.hero.image || '/hero_cashew_bowl.jpg'}
-                  alt="Preview"
-                  className="w-full h-full object-cover object-right"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/hero_cashew_bowl.jpg'; }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-cream-100/90 via-cream-100/60 to-transparent p-4 flex flex-col justify-center">
-                  <span className="inline-block text-[9px] font-bold text-brand-800 bg-white/80 px-2 py-0.5 rounded-full w-max mb-1 border border-brand-200">
-                    {content.hero.badge}
-                  </span>
-                  <div className="font-serif text-lg font-bold text-brand-950 leading-tight">
-                    {content.hero.titleLine1} <br />
-                    {content.hero.titleLine2} <br />
-                    <span className="italic font-normal text-brand-700">{content.hero.titleHighlight}</span>
-                  </div>
-                  <p className="text-[10px] text-brand-800/90 mt-1 line-clamp-2">
-                    {content.hero.subtitle}
-                  </p>
-                  <span className="mt-2 text-[9px] font-bold text-white bg-brand-700 px-3 py-1 rounded-full w-max shadow-sm">
-                    {content.hero.buttonText} →
-                  </span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-500">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Interactive Live Preview</span>
                 </div>
+                {currentHeroSlides.length > 1 && (
+                  <span className="text-[10px] font-bold text-brand-700 bg-white px-2 py-0.5 rounded-full border border-brand-200">
+                    Slide {previewHeroIdx + 1} of {currentHeroSlides.length}
+                  </span>
+                )}
               </div>
+
+              {/* Simulated Hero Card */}
+              {(() => {
+                const safeIdx = previewHeroIdx < currentHeroSlides.length ? previewHeroIdx : 0;
+                const activePreview = currentHeroSlides[safeIdx] || currentHeroSlides[0];
+
+                return (
+                  <div className="relative rounded-2xl overflow-hidden border border-brand-200 bg-white aspect-[4/3] shadow-sm mb-4 group/preview">
+                    <img
+                      src={activePreview.image || '/hero_cashew_bowl.jpg'}
+                      alt="Preview"
+                      className="w-full h-full object-cover object-right"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = '/hero_cashew_bowl.jpg';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-cream-100/90 via-cream-100/60 to-transparent p-4 flex flex-col justify-center">
+                      {activePreview.badge && (
+                        <span className="inline-block text-[9px] font-bold text-brand-800 bg-white/80 px-2 py-0.5 rounded-full w-max mb-1 border border-brand-200">
+                          {activePreview.badge}
+                        </span>
+                      )}
+                      <div className="font-serif text-lg font-bold text-brand-950 leading-tight">
+                        {activePreview.titleLine1} <br />
+                        {activePreview.titleLine2} <br />
+                        <span className="italic font-normal text-brand-700">{activePreview.titleHighlight}</span>
+                      </div>
+                      <p className="text-[10px] text-brand-800/90 mt-1 line-clamp-2">
+                        {activePreview.subtitle}
+                      </p>
+                      <span className="mt-2 text-[9px] font-bold text-white bg-brand-700 px-3 py-1 rounded-full w-max shadow-sm">
+                        {activePreview.buttonText || 'Shop Now'} →
+                      </span>
+                    </div>
+
+                    {/* Interactive Preview Slide Controls if multiple slides */}
+                    {currentHeroSlides.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewHeroIdx((prev) => (prev - 1 + currentHeroSlides.length) % currentHeroSlides.length)}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/80 text-brand-900 shadow-md flex items-center justify-center hover:bg-white cursor-pointer"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewHeroIdx((prev) => (prev + 1) % currentHeroSlides.length)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/80 text-brand-900 shadow-md flex items-center justify-center hover:bg-white cursor-pointer"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+
+                        {/* Interactive dynamic dots in preview */}
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/20 backdrop-blur-sm">
+                          {currentHeroSlides.map((_, dotIdx) => (
+                            <button
+                              key={dotIdx}
+                              type="button"
+                              onClick={() => setPreviewHeroIdx(dotIdx)}
+                              className={`transition-all rounded-full ${
+                                dotIdx === safeIdx ? 'w-4 h-1.5 bg-brand-900' : 'w-1.5 h-1.5 bg-brand-400/70'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+
               <p className="text-xs text-brand-500 italic">
-                * Note: Changes are instantly applied to the live storefront when you click Save.
+                * Note: Changes are instantly applied to the live storefront when you click Apply Hero Changes.
               </p>
             </div>
 
@@ -1909,6 +2169,227 @@ export default function AdminContent() {
                 <button
                   type="button"
                   onClick={() => handleSaveBannerModal(true)}
+                  disabled={saving}
+                  className="flex-1 sm:flex-initial btn-primary px-6 py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-md disabled:opacity-60 cursor-pointer"
+                >
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>Save & Publish Live</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HERO BANNER ADD / EDIT MODAL */}
+      {heroModalOpen && (
+        <div className="fixed inset-0 z-50 bg-brand-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-brand-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-scale-up my-auto">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-brand-200 bg-cream-50/80 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-brand-800 text-cream-50 flex items-center justify-center shadow-sm">
+                  <Sparkles className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-brand-950">
+                    {editingHeroIndex === null ? 'Add New Hero Banner' : `Edit Hero Banner #${editingHeroIndex + 1}`}
+                  </h3>
+                  <p className="text-xs text-brand-600">
+                    Customize headline typography, badges, imagery, and button actions for the storefront slider.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHeroModalOpen(false)}
+                className="p-2 rounded-xl text-brand-400 hover:text-brand-900 hover:bg-brand-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Left: Input Fields */}
+                <div className="lg:col-span-7 space-y-4">
+                  {/* Floating Pill Badge */}
+                  <div>
+                    <label className="text-xs font-bold text-brand-900 block mb-1">
+                      Floating Pill Badge Text (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={heroForm.badge}
+                      onChange={(e) => setHeroForm((h) => ({ ...h, badge: e.target.value }))}
+                      placeholder="e.g. India's Premium Cashew Brand"
+                      className="input-field text-xs"
+                    />
+                  </div>
+
+                  {/* Headline Breakdown */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-brand-900 block mb-1">
+                        Headline Line 1 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={heroForm.titleLine1}
+                        onChange={(e) => setHeroForm((h) => ({ ...h, titleLine1: e.target.value }))}
+                        placeholder="Cashews,"
+                        className="input-field text-xs"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-brand-900 block mb-1">
+                        Headline Line 2
+                      </label>
+                      <input
+                        type="text"
+                        value={heroForm.titleLine2}
+                        onChange={(e) => setHeroForm((h) => ({ ...h, titleLine2: e.target.value }))}
+                        placeholder="crafted to"
+                        className="input-field text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-brand-900 block mb-1">
+                        Highlight (Italic)
+                      </label>
+                      <input
+                        type="text"
+                        value={heroForm.titleHighlight}
+                        onChange={(e) => setHeroForm((h) => ({ ...h, titleHighlight: e.target.value }))}
+                        placeholder="perfection."
+                        className="input-field text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Subtitle Description */}
+                  <div>
+                    <label className="text-xs font-bold text-brand-900 block mb-1">
+                      Sub-heading Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={heroForm.subtitle}
+                      onChange={(e) => setHeroForm((h) => ({ ...h, subtitle: e.target.value }))}
+                      placeholder="From the sun-drenched coast of Goa to your home — hand-sorted, freshly packed..."
+                      className="input-field text-xs resize-none"
+                    />
+                  </div>
+
+                  {/* Button Label */}
+                  <div>
+                    <label className="text-xs font-bold text-brand-900 block mb-1">
+                      Call-to-Action Button Label
+                    </label>
+                    <input
+                      type="text"
+                      value={heroForm.buttonText}
+                      onChange={(e) => setHeroForm((h) => ({ ...h, buttonText: e.target.value }))}
+                      placeholder="Shop Now"
+                      className="input-field text-xs"
+                    />
+                  </div>
+
+                  {/* Banner Photography Upload */}
+                  <div className="pt-2">
+                    <ImageUploadWidget
+                      label="Banner Background Photography (Landscape Recommended)"
+                      value={heroForm.image}
+                      onChange={(url) => setHeroForm((h) => ({ ...h, image: url }))}
+                      aspectRatio="landscape"
+                      helpText="Upload high-res product or harvest photography directly to Cloudinary."
+                    />
+                  </div>
+                </div>
+
+                {/* Right: Live Interactive Card Preview */}
+                <div className="lg:col-span-5 flex flex-col space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-brand-900">
+                    <Eye className="w-4 h-4 text-brand-700" />
+                    <span>Real-Time Customer Preview</span>
+                  </div>
+
+                  <div className="rounded-2xl border-2 border-brand-200 overflow-hidden shadow-md bg-cream-100 relative min-h-[300px] flex items-center p-5">
+                    {/* Background Image */}
+                    {heroForm.image ? (
+                      <img
+                        src={heroForm.image}
+                        alt={heroForm.titleLine1}
+                        className="absolute inset-0 w-full h-full object-cover object-right"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-cream-200 flex items-center justify-center text-brand-400 text-xs">
+                        No image uploaded
+                      </div>
+                    )}
+                    {/* Directional Vignette Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-cream-100/95 via-cream-100/80 to-transparent pointer-events-none" />
+
+                    {/* Content overlay */}
+                    <div className="relative z-10 max-w-[220px] space-y-2">
+                      {heroForm.badge && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/80 border border-brand-200 text-brand-900 text-[10px] font-bold">
+                          <Leaf className="w-2.5 h-2.5 text-forest-700" />
+                          <span>{heroForm.badge}</span>
+                        </span>
+                      )}
+                      <h4 className="font-serif text-lg font-bold text-brand-950 leading-tight">
+                        {heroForm.titleLine1 || 'Headline 1'} <br />
+                        {heroForm.titleLine2 || 'Headline 2'} <br />
+                        <span className="italic font-normal text-brand-800">{heroForm.titleHighlight || 'Highlight'}</span>
+                      </h4>
+                      {heroForm.subtitle && (
+                        <p className="text-[11px] text-brand-800/90 line-clamp-3">
+                          {heroForm.subtitle}
+                        </p>
+                      )}
+                      <div className="pt-2">
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-brand-700 text-cream-50 text-xs font-semibold shadow-sm">
+                          <span>{heroForm.buttonText || 'Shop Now'}</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] text-amber-900">
+                    <p className="font-bold mb-0.5">Slider Behavior Note:</p>
+                    <p>When you have 2 or more banners saved, horizontal dots and swipe transitions automatically appear on the storefront. If only 1 banner exists, dots are hidden for a clean look.</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-brand-200 bg-cream-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setHeroModalOpen(false)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-brand-200 bg-white hover:bg-cream-100 text-brand-700 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleSaveHeroModal(false)}
+                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl border border-brand-300 bg-white hover:bg-cream-100 text-brand-900 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  Save to Drafts
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveHeroModal(true)}
                   disabled={saving}
                   className="flex-1 sm:flex-initial btn-primary px-6 py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-md disabled:opacity-60 cursor-pointer"
                 >

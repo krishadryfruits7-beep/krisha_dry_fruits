@@ -250,9 +250,9 @@ function App() {
         break;
       case 'product':
         if (selectedProduct) {
-          title = `${selectedProduct.title || selectedProduct.grade} Cashews | Krisha Dry Fruits`;
-          desc = `Buy authentic ${selectedProduct.grade} grade cashews (${selectedProduct.variety || 'Raw/Whole'}) from Krisha Dry Fruits, Yeshwanthpur, Bangalore. Freshly packed with 1-click checkout.`;
-          canonical = `https://krishadryfruits.in/product?id=${(selectedProduct as any)._id || selectedProduct.id}`;
+          title = `${selectedProduct.name || selectedProduct.grade} Cashews | Krisha Dry Fruits`;
+          desc = `Buy authentic ${selectedProduct.grade} grade cashews from Krisha Dry Fruits, Yeshwanthpur, Bangalore. Freshly packed with 1-click checkout.`;
+          canonical = `https://krishadryfruits.in/product?id=${selectedProduct._id || selectedProduct.id}`;
         }
         break;
       case 'myorders':

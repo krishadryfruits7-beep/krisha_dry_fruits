@@ -209,6 +209,7 @@ export const handler: Handler = async (event) => {
           key: 'current',
           announcement: body.announcement,
           hero: body.hero,
+          heroSlides: body.heroSlides,
           features: body.features,
           locationBanners: body.locationBanners,
           contact: body.contact,
