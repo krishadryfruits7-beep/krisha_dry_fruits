@@ -3,7 +3,7 @@ import { ArrowLeft, Package, Clock, Truck, CheckCircle2, XCircle, Search, MapPin
 import { useUser, useClerk } from '@/auth';
 import { api } from '@/api';
 import { formatPrice } from '@/data';
-import { useCustomerOrders } from '@/orders-storage';
+import { useCustomerOrders, updateCustomerOrderStatus } from '@/orders-storage';
 import type { OrderDetails } from '@/types';
 
 interface MyOrdersProps {
@@ -18,6 +18,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; s
   shipped:   { label: 'In Transit',     icon: Truck,        color: 'text-purple-700 bg-purple-50 border-purple-200', step: 4 },
   delivered: { label: 'Delivered',      icon: CheckCircle2, color: 'text-forest-700 bg-forest-50 border-forest-200', step: 5 },
   cancelled: { label: 'Cancelled',      icon: XCircle,      color: 'text-red-700 bg-red-50 border-red-200',       step: 0 },
+  canceled:  { label: 'Cancelled',      icon: XCircle,      color: 'text-red-700 bg-red-50 border-red-200',       step: 0 },
 };
 
 const ORDER_STEPS = ['Received', 'Confirmed', 'Packed', 'Shipped', 'Delivered'];
@@ -30,6 +31,7 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
   const [loadingServer, setLoadingServer] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   // Sync server orders if user is signed in
   useEffect(() => {
@@ -42,6 +44,13 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
       .then((res: any) => {
         if (Array.isArray(res?.orders)) {
           setServerOrders(res.orders);
+          // Sync any status updates back to localStorage immediately
+          res.orders.forEach((so: any) => {
+            const id = so.orderId || so._id;
+            if (id && so.status) {
+              updateCustomerOrderStatus(id, so.status, so.trackingNumber, so.notes);
+            }
+          });
         }
       })
       .catch(() => {
@@ -49,6 +58,24 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
       })
       .finally(() => setLoadingServer(false));
   }, [isSignedIn, user]);
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!window.confirm(`Are you sure you want to cancel Order #${orderId}?`)) return;
+    setCancellingId(orderId);
+    try {
+      try {
+        await api.orders.cancel(orderId, 'Cancelled by customer');
+      } catch (err) {
+        console.warn('Backend cancel failed, updating locally:', err);
+      }
+      updateCustomerOrderStatus(orderId, 'cancelled');
+      setServerOrders((prev) =>
+        prev.map((o) => (o.orderId === orderId || o._id === orderId ? { ...o, status: 'cancelled' } : o))
+      );
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   // Combine and deduplicate orders by orderId
   const allOrders = (() => {
@@ -237,49 +264,82 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
               {/* Expanded Details Body */}
               {isExpanded && (
                 <div className="p-5 sm:p-6 bg-cream-50/30 space-y-6 animate-fade-in">
-                  {/* Visual Fulfillment Step Tracker */}
-                  <div className="bg-white rounded-2xl p-4 sm:p-5 border border-brand-200/60 shadow-sm">
-                    <div className="text-[11px] uppercase tracking-wider font-bold text-brand-400 mb-3">
-                      Order Progress
-                    </div>
-                    <div className="grid grid-cols-5 gap-1 sm:gap-2">
-                      {ORDER_STEPS.map((stepName, idx) => {
-                        const stepNumber = idx + 1;
-                        const isCompleted = cfg.step >= stepNumber;
-                        const isCurrent = cfg.step === stepNumber;
-
-                        return (
-                          <div key={stepName} className="flex flex-col items-center text-center">
-                            <div
-                              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                                isCompleted
-                                  ? 'bg-forest-600 text-white shadow-sm'
-                                  : 'bg-brand-100 text-brand-400'
-                              } ${isCurrent ? 'ring-4 ring-forest-500/20' : ''}`}
-                            >
-                              {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : stepNumber}
-                            </div>
-                            <span
-                              className={`text-[9.5px] sm:text-xs font-semibold mt-1.5 ${
-                                isCompleted ? 'text-brand-950' : 'text-brand-400'
-                              }`}
-                            >
-                              {stepName}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {order.trackingNumber && (
-                      <div className="mt-4 pt-3 border-t border-brand-100 flex items-center justify-between text-xs">
-                        <span className="text-brand-600">Air Express Tracking:</span>
-                        <span className="font-mono font-bold text-brand-950 bg-cream-100 px-2.5 py-1 rounded-lg">
-                          {order.trackingNumber}
-                        </span>
+                  {/* Visual Fulfillment Step Tracker or Cancellation Card */}
+                  {order.status === 'cancelled' || order.status === 'canceled' ? (
+                    <div className="bg-red-50/90 rounded-2xl p-4 sm:p-5 border border-red-200/80 shadow-sm flex items-start gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+                        <XCircle className="w-5 h-5" />
                       </div>
-                    )}
-                  </div>
+                      <div className="flex-1">
+                        <h4 className="font-serif text-sm sm:text-base font-bold text-red-950">
+                          Order #{orderIdentifier} is Cancelled
+                        </h4>
+                        <p className="text-xs text-red-800/90 mt-1 leading-relaxed">
+                          {order.notes || 'This order was cancelled and will not be prepared or dispatched. No payment was captured.'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-brand-200/60 shadow-sm space-y-4">
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider font-bold text-brand-400 mb-3">
+                          Order Progress
+                        </div>
+                        <div className="grid grid-cols-5 gap-1 sm:gap-2">
+                          {ORDER_STEPS.map((stepName, idx) => {
+                            const stepNumber = idx + 1;
+                            const isCompleted = cfg.step >= stepNumber;
+                            const isCurrent = cfg.step === stepNumber;
+
+                            return (
+                              <div key={stepName} className="flex flex-col items-center text-center">
+                                <div
+                                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                                    isCompleted
+                                      ? 'bg-forest-600 text-white shadow-sm'
+                                      : 'bg-brand-100 text-brand-400'
+                                  } ${isCurrent ? 'ring-4 ring-forest-500/20' : ''}`}
+                                >
+                                  {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : stepNumber}
+                                </div>
+                                <span
+                                  className={`text-[9.5px] sm:text-xs font-semibold mt-1.5 ${
+                                    isCompleted ? 'text-brand-950' : 'text-brand-400'
+                                  }`}
+                                >
+                                  {stepName}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {order.trackingNumber && (
+                        <div className="pt-3 border-t border-brand-100 flex items-center justify-between text-xs">
+                          <span className="text-brand-600">Air Express Tracking:</span>
+                          <span className="font-mono font-bold text-brand-950 bg-cream-100 px-2.5 py-1 rounded-lg">
+                            {order.trackingNumber}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Customer Cancel Button for pending / confirmed orders */}
+                      {(order.status === 'pending' || order.status === 'confirmed' || !order.status) && (
+                        <div className="pt-3 border-t border-brand-100 flex items-center justify-between">
+                          <span className="text-xs text-brand-500">Need to cancel this order?</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCancelOrder(orderIdentifier)}
+                            disabled={cancellingId === orderIdentifier}
+                            className="px-3.5 py-1.5 rounded-xl border border-red-200 bg-white hover:bg-red-50 text-red-700 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                          >
+                            {cancellingId === orderIdentifier ? 'Cancelling...' : 'Cancel Order'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Items Breakdown */}
                   <div className="space-y-3">

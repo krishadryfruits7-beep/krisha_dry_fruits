@@ -43,6 +43,12 @@ export const api = {
       req<any>('/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) }),
     get: (orderId: string) => req<any>(`/orders?orderId=${orderId}`),
     listByUser: (email: string) => req<{ orders: any[] }>(`/orders?email=${encodeURIComponent(email)}`),
+    cancel: (orderId: string, reason?: string) =>
+      req<any>('/orders?action=cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, reason }),
+      }),
   },
   content: {
     get: () => req<any>('/content'),

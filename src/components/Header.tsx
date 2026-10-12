@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useCart } from '@/cart-context';
 import { useUser, useClerk, SignInButton, UserButton } from '@/auth';
 import { useSiteContent, getStoreGoogleMapsUrl } from '@/site-content';
-import { useCustomerOrders } from '@/orders-storage';
+import { useCustomerOrders, isOrderActive } from '@/orders-storage';
 
 interface HeaderProps {
   onNavigate: (page: string) => void;
@@ -18,6 +18,7 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
   const clerk = useClerk();
   const content = useSiteContent();
   const customerOrders = useCustomerOrders();
+  const activeOrdersCount = customerOrders.filter(isOrderActive).length;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -206,9 +207,9 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
                 title="View My Orders"
               >
                 <Package className="w-5 h-5 stroke-[1.8]" />
-                {customerOrders.length > 0 && (
+                {activeOrdersCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full text-[10px] font-bold bg-amber-600 text-white flex items-center justify-center shadow-sm">
-                    {customerOrders.length}
+                    {activeOrdersCount}
                   </span>
                 )}
               </button>
@@ -291,9 +292,9 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
                               <Package className="w-4 h-4 text-brand-600" />
                               <span>My Orders & Shipments</span>
                             </span>
-                            {customerOrders.length > 0 && (
+                            {activeOrdersCount > 0 && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900">
-                                {customerOrders.length}
+                                {activeOrdersCount}
                               </span>
                             )}
                           </button>
@@ -371,9 +372,9 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
                               <Package className="w-4 h-4 text-brand-600" />
                               <span>Track My Orders</span>
                             </span>
-                            {customerOrders.length > 0 && (
+                            {activeOrdersCount > 0 && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900">
-                                {customerOrders.length}
+                                {activeOrdersCount}
                               </span>
                             )}
                           </button>
@@ -496,9 +497,9 @@ export default function Header({ onNavigate, onOpenCart, onSearch, currentPage }
                     <Package className="w-4 h-4 text-brand-600" />
                     <span>Track My Orders</span>
                   </span>
-                  {customerOrders.length > 0 && (
+                  {activeOrdersCount > 0 && (
                     <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
-                      {customerOrders.length}
+                      {activeOrdersCount}
                     </span>
                   )}
                 </button>

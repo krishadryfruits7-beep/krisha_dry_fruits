@@ -17,7 +17,33 @@ export const handler: Handler = async (event) => {
     await connectDB();
 
     if (event.httpMethod === 'POST') {
+      const action = event.queryStringParameters?.action;
       const body = JSON.parse(event.body || '{}');
+
+      if (action === 'cancel') {
+        const targetId = body.orderId || event.queryStringParameters?.orderId;
+        if (!targetId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'orderId required' }) };
+
+        let order = await Order.findOne({ orderId: targetId });
+        if (!order && mongoose.Types.ObjectId.isValid(targetId)) {
+          order = await Order.findById(targetId);
+        }
+        if (!order) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Order not found' }) };
+
+        if (order.status === 'shipped' || order.status === 'delivered') {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Order has already shipped or delivered and cannot be cancelled online.' }),
+          };
+        }
+
+        order.status = 'cancelled';
+        order.notes = body.reason ? `Cancelled: ${body.reason}` : 'Cancelled by customer';
+        await order.save();
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true, order }) };
+      }
+
       const order = await Order.create(body);
       return { statusCode: 201, headers, body: JSON.stringify(order) };
     }
