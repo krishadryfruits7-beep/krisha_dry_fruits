@@ -32,7 +32,7 @@ export default function AdminLayout({ page, onNavigate, onLogout, children, user
           />
         </div>
         <div>
-          <div className="font-serif text-sm font-bold text-cream-50 tracking-tight leading-tight">Krisha Console</div>
+          <div className="font-serif text-sm font-bold text-cream-50 tracking-tight leading-tight">Krisha Dry Fruits</div>
           <div className="text-[9px] tracking-[0.2em] uppercase font-semibold text-brand-400">HQ Management</div>
         </div>
       </div>
