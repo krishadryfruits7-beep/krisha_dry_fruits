@@ -130,9 +130,79 @@
       }
     }
     </script>
+
+    <!-- Structured Data: FAQPage Schema (Google Rich Snippets & Search Visibility) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Where is Krisha Dry Fruits shop located in Yeshwanthpur, Bangalore?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Krisha Dry Fruits is located near APMC Market, Yeshwanthpur, Bengaluru, Karnataka 560022. We are open Monday to Saturday from 9:00 AM to 9:00 PM for retail and wholesale dry fruits and online at https://krishadryfruits.in/."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What premium cashew varieties and grades are available at Krisha Dry Fruits?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Krisha Dry Fruits stocks certified whole cashews including W180 (King of Cashews), W210 (Jumbo), W240 (Classic Large), W320 (Standard Premium), and W450, available in Raw, Roasted & Salted, Fried, and Pepper Spiced options."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Krisha Dry Fruits offer online ordering and doorstep delivery across India?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! You can order online at https://krishadryfruits.in/ with free shipping across India on orders over ₹1,200. Orders are freshly hand-sorted and packed within 48 hours."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How can I contact Krisha Dry Fruits customer support?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You can reach our team via phone or WhatsApp at +91 98765 43210 or email at care@krishadryfruits.in."
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Semantic Pre-Rendered Fallback for Search Spiders (Hydrated instantly by React) -->
+    <div id="root">
+      <header style="padding: 1rem; text-align: center; background: #26150c; color: #fbf6ee;">
+        <p style="font-size: 0.85rem; margin: 0;">Free pan-India shipping over ₹1,200 • Freshly hand-sorted & packed within 48h</p>
+      </header>
+      <main style="max-width: 960px; margin: 0 auto; padding: 2rem 1rem; font-family: system-ui, -apple-system, sans-serif;">
+        <h1 style="font-size: 2rem; color: #26150c; margin-bottom: 0.5rem;">Krisha Dry Fruits | Best Premium Dry Fruits & Cashew Nuts Shop in Yeshwanthpur, Bangalore</h1>
+        <p style="font-size: 1.1rem; color: #4a2c1d; line-height: 1.6;">
+          Welcome to <strong>Krisha Dry Fruits (krishadryfruits.in)</strong> — your premier destination for coastal harvest cashews and artisanal dry fruits in Yeshwanthpur, Bengaluru. We specialize in hand-curated premium cashew grades: <strong>W180 (King Cashews), W210 (Jumbo), W240, W320, and W450</strong>, alongside California almonds, walnuts, dates, and festive gift boxes.
+        </p>
+        <section style="margin-top: 1.5rem;">
+          <h2 style="font-size: 1.3rem; color: #26150c;">Our Premium Cashew Grades & Catalog</h2>
+          <ul>
+            <li><strong>W180 Cashews:</strong> The King of Cashews — largest whole kernel nuts, harvested and sun-dried along the coastal orchards.</li>
+            <li><strong>W210 Cashews:</strong> Jumbo size kernels, creamy and rich in natural nutrients.</li>
+            <li><strong>W240 Cashews:</strong> Large premium nuts, ideal for snacking and celebrations.</li>
+            <li><strong>W320 Cashews:</strong> The world's most popular grade — balanced crunch and buttery sweetness.</li>
+            <li><strong>W450 Cashews:</strong> Petite bite-sized nuts, perfect for traditional sweets and daily vitality.</li>
+          </ul>
+        </section>
+        <section style="margin-top: 1.5rem;">
+          <h2 style="font-size: 1.3rem; color: #26150c;">Store Location & Contact</h2>
+          <p><strong>Address:</strong> Near APMC Market, Yeshwanthpur, Bengaluru, Karnataka 560022, India</p>
+          <p><strong>Hours:</strong> Monday – Saturday: 9:00 AM – 9:00 PM</p>
+          <p><strong>Phone:</strong> +91 98765 43210 | <strong>Email:</strong> care@krishadryfruits.in</p>
+          <p><strong>Official Website:</strong> <a href="https://krishadryfruits.in/">https://krishadryfruits.in/</a></p>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
