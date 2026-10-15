@@ -38,8 +38,8 @@ export default function OrderConfirmation({ order, onContinueShopping, onViewOrd
       <div className="card p-6 mb-8 border border-brand-200/60 shadow-luxury">
         <h2 className="font-serif text-lg font-semibold text-brand-900 mb-4">Order Items</h2>
         <div className="space-y-3">
-          {order.items.map((item) => (
-            <div key={item.id} className="flex gap-3.5 items-center">
+          {order.items.map((item, idx) => (
+            <div key={item.id || (item as any)._id || idx} className="flex gap-3.5 items-center">
               <img
                 src={item.image || '/cashew_single_nut.jpg'}
                 alt={item.grade}

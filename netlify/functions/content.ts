@@ -54,37 +54,52 @@ export const handler: Handler = async (event) => {
         resolvedUrl = response.url || targetUrl;
         const html = await response.text();
 
-        const atMatch = resolvedUrl.match(/@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/);
-        if (atMatch) {
-          lat = Number(atMatch[1]).toFixed(6);
-          lng = Number(atMatch[2]).toFixed(6);
+        // Check for Google consent redirect
+        if (resolvedUrl.includes('continue=')) {
+          const contMatch = resolvedUrl.match(/[?&]continue=([^&]+)/);
+          if (contMatch) {
+            resolvedUrl = decodeURIComponent(contMatch[1]);
+          }
         }
 
+        // 1. Google Maps place pin: !3d<latitude>!4d<longitude>
+        const placePinMatch = resolvedUrl.match(/!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/);
+        if (placePinMatch) {
+          lat = Number(placePinMatch[1]).toFixed(6);
+          lng = Number(placePinMatch[2]).toFixed(6);
+        }
+
+        // 2. Google Maps viewport center: !2d<longitude>!3d<latitude>
         if (!lat) {
-          const qMatch = resolvedUrl.match(/[?&](?:q|query|ll)=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/);
+          const vpMatch = resolvedUrl.match(/!2d(-?\d{1,3}\.\d+)!3d(-?\d{1,2}\.\d+)/);
+          if (vpMatch) {
+            lat = Number(vpMatch[2]).toFixed(6);
+            lng = Number(vpMatch[1]).toFixed(6);
+          }
+        }
+
+        // 3. Standard @lat,lng e.g. /@13.020102,77.547321,17z
+        if (!lat) {
+          const atMatch = resolvedUrl.match(/@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/);
+          if (atMatch) {
+            lat = Number(atMatch[1]).toFixed(6);
+            lng = Number(atMatch[2]).toFixed(6);
+          }
+        }
+
+        // 4. Query coords ?q=lat,lng or &query=lat,lng or &ll=lat,lng or center=lat,lng
+        if (!lat) {
+          const qMatch = resolvedUrl.match(/[?&](?:q|query|ll|center)=(-?\d{1,2}\.\d+)(?:,|%2C)(-?\d{1,3}\.\d+)/);
           if (qMatch) {
             lat = Number(qMatch[1]).toFixed(6);
             lng = Number(qMatch[2]).toFixed(6);
           }
         }
 
-        if (!lat) {
-          const pbMatch = resolvedUrl.match(/!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/) ||
-            resolvedUrl.match(/!2d(-?\d{1,3}\.\d+)!3d(-?\d{1,2}\.\d+)/);
-          if (pbMatch) {
-            if (resolvedUrl.includes('!2d') && resolvedUrl.indexOf('!2d') < resolvedUrl.indexOf('!3d')) {
-              lng = Number(pbMatch[1]).toFixed(6);
-              lat = Number(pbMatch[2]).toFixed(6);
-            } else {
-              lat = Number(pbMatch[1]).toFixed(6);
-              lng = Number(pbMatch[2]).toFixed(6);
-            }
-          }
-        }
-
+        // 5. Check static map / HTML state
         if (!lat && html) {
-          const staticMatch = html.match(/center=(-?\d{1,2}\.\d+)%2C(-?\d{1,3}\.\d+)/i) ||
-            html.match(/center=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/i);
+          const staticMatch = html.match(/center=(-?\d{1,2}\.\d+)(?:%2C|,)(-?\d{1,3}\.\d+)/i) ||
+            html.match(/window\.APP_INITIALIZATION_STATE=\[\[\[(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/);
           if (staticMatch) {
             lat = Number(staticMatch[1]).toFixed(6);
             lng = Number(staticMatch[2]).toFixed(6);
@@ -192,6 +207,7 @@ export const handler: Handler = async (event) => {
       contact: { ...DEFAULT_SITE_CONTENT.contact, ...(doc.contact || {}) },
       social: { ...DEFAULT_SITE_CONTENT.social, ...(doc.social || {}) },
       footerBio: doc.footerBio ?? DEFAULT_SITE_CONTENT.footerBio,
+      adminEmails: Array.isArray(doc.adminEmails) ? doc.adminEmails : [],
     };
 
     return { statusCode: 200, headers, body: JSON.stringify(merged) };

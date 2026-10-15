@@ -92,6 +92,16 @@ export const adminApi = {
         headers: adminHeaders(),
         body: JSON.stringify({ input }),
       }),
+    getAdmins: () =>
+      req<{ success: boolean; adminEmails: string[] }>('/admin-content?action=get-admins', {
+        headers: adminHeaders(),
+      }),
+    updateAdmins: (adminEmails: string[]) =>
+      req<{ success: boolean; adminEmails: string[] }>('/admin-content?action=update-admins', {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({ adminEmails }),
+      }),
   },
   orders: {
     list: (params?: { status?: string; search?: string; page?: number }) => {

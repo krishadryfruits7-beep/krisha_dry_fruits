@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, ArrowLeft, AlertCircle, LogOut, Loader2, ArrowRight } from 'lucide-react';
 import { useUser, useClerk } from '@/auth';
-import { isAdminAuthorized } from '@/admin-auth';
+import { isAdminAuthorized, useAdminWhitelist } from '@/admin-auth';
 import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './components/AdminDashboard';
 import AdminContent from './components/AdminContent';
@@ -16,6 +16,7 @@ export default function AdminApp() {
   // Always call all hooks unconditionally at top level
   const { isSignedIn, user, isLoaded } = useUser();
   const clerk = useClerk();
+  useAdminWhitelist();
 
   const getInitialAdminState = () => {
     if (typeof window === 'undefined') return { page: 'dashboard' as AdminPage, orderId: null };

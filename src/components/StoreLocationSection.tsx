@@ -145,6 +145,7 @@ export default function StoreLocationSection({ onContactClick }: StoreLocationSe
             {viewMode === 'map' ? (
               <div className="relative w-full h-full min-h-[300px] sm:min-h-[360px] flex flex-col justify-between">
                 <iframe
+                  key={`${contact.latitude || ''}_${contact.longitude || ''}_${contact.googleMapsUrl || ''}_${contact.address || ''}`}
                   title="Krisha Dry Fruits Live Store Location"
                   src={embedUrl}
                   width="100%"

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { adminApi, api } from './api';
 
 export const DEFAULT_PERMANENT_ADMIN_EMAILS = [
   'sanjayparihar0625@gmail.com',
@@ -41,6 +42,40 @@ export function getAdminWhitelist(): string[] {
   }
 }
 
+export function syncAdminWhitelist(serverList?: string[]): string[] {
+  const permanent = Array.from(
+    new Set(DEFAULT_PERMANENT_ADMIN_EMAILS.map((e) => e.trim().toLowerCase()).filter(Boolean))
+  );
+
+  const incoming = Array.isArray(serverList)
+    ? serverList.map((e) => e.trim().toLowerCase()).filter(Boolean)
+    : [];
+
+  const merged = Array.from(new Set([...permanent, ...incoming]));
+  try {
+    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(merged));
+    window.dispatchEvent(new CustomEvent(ADMIN_EVENT, { detail: merged }));
+  } catch {}
+  return merged;
+}
+
+export async function fetchAndSyncAdmins(): Promise<string[]> {
+  try {
+    const res = await adminApi.content.getAdmins();
+    if (res && res.adminEmails) {
+      return syncAdminWhitelist(res.adminEmails);
+    }
+  } catch {
+    try {
+      const publicContent = await api.content.get();
+      if (publicContent && publicContent.adminEmails) {
+        return syncAdminWhitelist(publicContent.adminEmails);
+      }
+    } catch {}
+  }
+  return getAdminWhitelist();
+}
+
 export function isPermanentAdmin(email?: string | null): boolean {
   if (!email) return false;
   const clean = email.trim().toLowerCase();
@@ -54,7 +89,7 @@ export function isAdminAuthorized(email?: string | null): boolean {
   return list.includes(cleanEmail);
 }
 
-export function addAdminEmail(email: string): { success: boolean; message: string } {
+export async function addAdminEmail(email: string): Promise<{ success: boolean; message: string }> {
   const clean = email.trim().toLowerCase();
   if (!clean || !clean.includes('@') || !clean.includes('.')) {
     return { success: false, message: 'Please enter a valid email address.' };
@@ -66,10 +101,18 @@ export function addAdminEmail(email: string): { success: boolean; message: strin
   const updated = [...current, clean];
   localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(updated));
   window.dispatchEvent(new CustomEvent(ADMIN_EVENT, { detail: updated }));
+
+  // Sync to database
+  try {
+    await adminApi.content.updateAdmins(updated);
+  } catch (err) {
+    console.warn('Could not sync admin to cloud database immediately:', err);
+  }
+
   return { success: true, message: `Admin privileges granted to ${clean}.` };
 }
 
-export function removeAdminEmail(email: string): { success: boolean; message: string } {
+export async function removeAdminEmail(email: string): Promise<{ success: boolean; message: string }> {
   const clean = email.trim().toLowerCase();
   if (isPermanentAdmin(clean)) {
     return { success: false, message: 'Cannot revoke access for a permanent root administrator.' };
@@ -78,6 +121,14 @@ export function removeAdminEmail(email: string): { success: boolean; message: st
   const updated = current.filter((e) => e !== clean);
   localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(updated));
   window.dispatchEvent(new CustomEvent(ADMIN_EVENT, { detail: updated }));
+
+  // Sync to database
+  try {
+    await adminApi.content.updateAdmins(updated);
+  } catch (err) {
+    console.warn('Could not sync admin revocation to cloud database immediately:', err);
+  }
+
   return { success: true, message: `Admin privileges revoked for ${clean}.` };
 }
 
@@ -85,6 +136,8 @@ export function useAdminWhitelist() {
   const [emails, setEmails] = useState<string[]>(getAdminWhitelist);
 
   useEffect(() => {
+    fetchAndSyncAdmins();
+
     const handler = (e: Event) => {
       const custom = e as CustomEvent<string[]>;
       if (custom.detail) {

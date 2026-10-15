@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Package } from 'lucide-react';
 import { CartProvider } from '@/cart-context';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -37,6 +38,8 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [order, setOrder] = useState<OrderDetails | null>(null);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderNotFound, setOrderNotFound] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrade, setSelectedGrade] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -126,18 +129,50 @@ function App() {
       window.history.replaceState({ page: getInitialPage() }, '', window.location.href);
     }
 
+    const recoverOrder = async (oId: string | null) => {
+      const allOrders = getCustomerOrders();
+      if (oId) {
+        const found = allOrders.find((x) => x.orderId === oId || (x as any)._id === oId);
+        if (found) {
+          setOrder(found);
+          setOrderLoading(false);
+          setOrderNotFound(false);
+          return;
+        }
+
+        // Fetch directly from server API if not in local storage
+        setOrderLoading(true);
+        setOrderNotFound(false);
+        try {
+          const remote = await api.orders.get(oId);
+          if (remote && (remote.orderId || (remote as any)._id)) {
+            setOrder(remote);
+            saveCustomerOrder(remote);
+            setOrderNotFound(false);
+          } else {
+            setOrderNotFound(true);
+          }
+        } catch {
+          setOrderNotFound(true);
+        } finally {
+          setOrderLoading(false);
+        }
+      } else if (allOrders.length > 0) {
+        setOrder(allOrders[0]);
+        setOrderLoading(false);
+        setOrderNotFound(false);
+      } else {
+        setOrderNotFound(true);
+        setOrderLoading(false);
+      }
+    };
+
     // Recover order if on confirmation page
     const initialPage = getInitialPage();
     if (initialPage === 'confirmation' && !order) {
       const searchParams = new URLSearchParams(window.location.search);
       const oId = searchParams.get('orderId') || searchParams.get('id');
-      const allOrders = getCustomerOrders();
-      if (oId) {
-        const found = allOrders.find((x) => x.orderId === oId || (x as any)._id === oId);
-        if (found) setOrder(found);
-      } else if (allOrders.length > 0) {
-        setOrder(allOrders[0]);
-      }
+      recoverOrder(oId);
     }
 
     const onPop = (e: PopStateEvent) => {
@@ -152,13 +187,7 @@ function App() {
 
       if (p === 'confirmation') {
         const oId = e.state?.orderId || new URLSearchParams(window.location.search).get('orderId');
-        const allOrders = getCustomerOrders();
-        if (oId) {
-          const found = allOrders.find((x) => x.orderId === oId || (x as any)._id === oId);
-          if (found) setOrder(found);
-        } else if (allOrders.length > 0) {
-          setOrder(allOrders[0]);
-        }
+        recoverOrder(oId);
       }
     };
     window.addEventListener('popstate', onPop);
@@ -205,6 +234,8 @@ function App() {
   const handlePlaceOrder = useCallback(async (o: OrderDetails) => {
     saveCustomerOrder(o);
     setOrder(o);
+    setOrderLoading(false);
+    setOrderNotFound(false);
     setPage('confirmation');
     window.history.pushState({ page: 'confirmation', orderId: o.orderId }, '', `/confirmation?orderId=${o.orderId}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -579,6 +610,30 @@ function App() {
                 onContinueShopping={() => navigate('home')}
                 onViewOrders={() => navigate('myorders')}
               />
+            ) : orderNotFound ? (
+              <div className="max-w-md mx-auto py-20 px-4 text-center animate-fade-in">
+                <div className="w-16 h-16 rounded-2xl bg-amber-100/70 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto mb-4">
+                  <Package className="w-8 h-8" />
+                </div>
+                <h3 className="font-serif text-xl font-bold text-brand-950 mb-2">Order Confirmation Not Found</h3>
+                <p className="text-xs sm:text-sm text-brand-600 mb-6 leading-relaxed">
+                  We could not locate this order details. If you just placed an order, please visit your orders page to check its live status.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <button
+                    onClick={() => navigate('myorders')}
+                    className="w-full sm:w-auto btn-primary py-2.5 px-6 text-xs font-semibold"
+                  >
+                    Track My Orders
+                  </button>
+                  <button
+                    onClick={() => navigate('home')}
+                    className="w-full sm:w-auto btn-secondary py-2.5 px-6 text-xs font-semibold"
+                  >
+                    Return to Store
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="max-w-md mx-auto py-24 px-4 text-center">
                 <div className="w-12 h-12 rounded-full border-4 border-brand-200 border-t-brand-700 animate-spin mx-auto mb-4" />

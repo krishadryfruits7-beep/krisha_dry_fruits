@@ -8,7 +8,9 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onView }: ProductCardProps) {
-  const allPrices = product.types.flatMap((t) => t.prices.map((p) => p.price)).filter(Boolean);
+  const allPrices = (product.types || [])
+    .flatMap((t) => (t.prices || []).map((p) => p.price))
+    .filter(Boolean);
   const minPrice = allPrices.length ? Math.min(...allPrices) : 0;
 
   return (

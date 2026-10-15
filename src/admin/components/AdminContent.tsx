@@ -50,6 +50,7 @@ import {
   DEFAULT_SITE_CONTENT,
   getStoreGoogleMapsUrl,
   getStoreEmbedMapUrl,
+  extractCoordinatesFromMapsUrl,
 } from '@/site-content';
 import ImageUploadWidget from './ImageUploadWidget';
 
@@ -199,25 +200,11 @@ export default function AdminContent() {
         let streetAddress: string | undefined;
         let landmark: string | undefined;
 
-        // Raw coords: "15.2736, 73.9582"
-        const coordMatch = targetUrl.match(/^(-?\d{1,2}\.\d+)[,\s]+(-?\d{1,3}\.\d+)$/);
-        if (coordMatch) {
-          lat = coordMatch[1];
-          lng = coordMatch[2];
-        }
-
-        // @lat,lng
-        const atMatch = targetUrl.match(/@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/);
-        if (atMatch) {
-          lat = atMatch[1];
-          lng = atMatch[2];
-        }
-
-        // ?q=lat,lng
-        const qMatch = targetUrl.match(/[?&](?:q|query|ll)=(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/);
-        if (qMatch) {
-          lat = qMatch[1];
-          lng = qMatch[2];
+        // Use standard coordinates extractor (handles !3d!4d, !2d!3d, @lat,lng, ?q=lat,lng)
+        const coords = extractCoordinatesFromMapsUrl(targetUrl);
+        if (coords) {
+          lat = Number(coords.lat).toFixed(6);
+          lng = Number(coords.lng).toFixed(6);
         }
 
         // /place/Name
@@ -268,8 +255,10 @@ export default function AdminContent() {
           const nextContact = { ...prev.contact };
           if (resolvedData.latitude) nextContact.latitude = resolvedData.latitude;
           if (resolvedData.longitude) nextContact.longitude = resolvedData.longitude;
-          // IMPORTANT: Do NOT touch or overwrite prev.contact.address!
-          // Full physical store address is strictly user-defined reading text.
+          // Auto-fill physical address if empty or still set to default Goa address
+          if (resolvedData.address && (!prev.contact.address || !prev.contact.address.trim() || prev.contact.address.includes('123 Plantation Road'))) {
+            nextContact.address = resolvedData.address;
+          }
           if (resolvedData.landmark) nextContact.landmark = resolvedData.landmark;
           if (resolvedData.googleMapsUrl) nextContact.googleMapsUrl = resolvedData.googleMapsUrl;
           if (resolvedData.shopName && (!nextContact.shopName || nextContact.shopName.includes('Flagship') || nextContact.shopName.includes('Goa'))) {
@@ -279,8 +268,8 @@ export default function AdminContent() {
         });
 
         if (resolvedData.googleMapsUrl) setPastedLink(resolvedData.googleMapsUrl);
-        const locDesc = resolvedData.landmark || 'Store Map Pin';
-        setGpsSuccess(`Map Pin updated: ${locDesc}${resolvedData.latitude ? ` (${resolvedData.latitude}, ${resolvedData.longitude})` : ''} — Navigation Link & Live Map Updated! (Physical store text address was left untouched)`);
+        const locDesc = resolvedData.landmark || resolvedData.shopName || 'Store Location';
+        setGpsSuccess(`Map Pin updated: ${locDesc}${resolvedData.latitude ? ` (${resolvedData.latitude}, ${resolvedData.longitude})` : ''} — Navigation Link & Live Map Centered!`);
         setTimeout(() => setGpsSuccess(null), 7000);
       } else {
         setGpsError('Could not automatically resolve this location. You can enter the coordinates or map link directly.');
@@ -366,8 +355,16 @@ export default function AdminContent() {
 
   const handleParseMapsLinkOrCoords = (input: string) => {
     setPastedLink(input);
-    if (!input.trim()) return;
-    handleAutoResolveAndFillLocation(input);
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    if (
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.includes('<iframe') ||
+      /^(-?\d{1,2}\.\d+)[,\s]+(-?\d{1,3}\.\d+)$/.test(trimmed)
+    ) {
+      handleAutoResolveAndFillLocation(trimmed);
+    }
   };
 
   const handleSave = async () => {
@@ -1515,9 +1512,22 @@ export default function AdminContent() {
                       type="text"
                       value={pastedLink}
                       onChange={(e) => handleParseMapsLinkOrCoords(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAutoResolveAndFillLocation(pastedLink)}
                       className="input-field font-mono text-xs flex-1"
                       placeholder="Paste e.g. https://maps.app.goo.gl/... or 15.2736, 73.9582..."
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (pastedLink.trim()) {
+                          handleAutoResolveAndFillLocation(pastedLink.trim());
+                        }
+                      }}
+                      disabled={searchingPlace || !pastedLink.trim()}
+                      className="px-3 py-2 bg-brand-800 hover:bg-brand-900 text-white rounded-xl text-xs font-semibold shrink-0 transition-colors disabled:opacity-50"
+                    >
+                      Pin Link
+                    </button>
                     <a
                       href="https://www.google.com/maps"
                       target="_blank"
@@ -1544,16 +1554,29 @@ export default function AdminContent() {
                     <input
                       type="text"
                       value={content.contact.googleMapsUrl || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateContact('googleMapsUrl', val);
-                        if (val.trim()) {
-                          handleAutoResolveAndFillLocation(val);
+                      onChange={(e) => updateContact('googleMapsUrl', e.target.value)}
+                      onPaste={(e) => {
+                        const val = e.clipboardData.getData('text');
+                        if (val && val.trim()) {
+                          handleAutoResolveAndFillLocation(val.trim());
                         }
                       }}
                       className="input-field font-mono text-xs flex-1"
                       placeholder="Paste https://maps.app.goo.gl/... or https://www.google.com/maps?q=..."
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (content.contact.googleMapsUrl?.trim()) {
+                          handleAutoResolveAndFillLocation(content.contact.googleMapsUrl.trim());
+                        }
+                      }}
+                      disabled={searchingPlace || !content.contact.googleMapsUrl?.trim()}
+                      className="px-3 py-2 bg-brand-100 hover:bg-brand-200 text-brand-900 rounded-xl text-xs font-semibold shrink-0 transition-colors disabled:opacity-50"
+                      title="Parse this URL and center the map pin"
+                    >
+                      Sync Pin
+                    </button>
                     <a
                       href={getStoreGoogleMapsUrl(content.contact)}
                       target="_blank"

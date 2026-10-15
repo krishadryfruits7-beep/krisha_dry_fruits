@@ -17,10 +17,10 @@ export default function AdminAdmins() {
   const [newEmail, setNewEmail] = useState('');
   const [statusMsg, setStatusMsg] = useState<{ text: string; error?: boolean } | null>(null);
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail.trim()) return;
-    const res = addAdmin(newEmail);
+    const res = await addAdmin(newEmail);
     setStatusMsg({ text: res.message, error: !res.success });
     if (res.success) {
       setNewEmail('');
@@ -28,9 +28,9 @@ export default function AdminAdmins() {
     setTimeout(() => setStatusMsg(null), 4000);
   };
 
-  const handleRemove = (email: string) => {
+  const handleRemove = async (email: string) => {
     if (!confirm(`Are you sure you want to revoke admin access for ${email}?`)) return;
-    const res = removeAdmin(email);
+    const res = await removeAdmin(email);
     setStatusMsg({ text: res.message, error: !res.success });
     setTimeout(() => setStatusMsg(null), 4000);
   };

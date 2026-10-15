@@ -44,6 +44,13 @@ export const handler: Handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ success: true, order }) };
       }
 
+      if (body.placedAt) {
+        const parsed = new Date(body.placedAt);
+        body.placedAt = isNaN(parsed.getTime()) ? new Date() : parsed;
+      } else {
+        body.placedAt = new Date();
+      }
+
       const order = await Order.create(body);
       return { statusCode: 201, headers, body: JSON.stringify(order) };
     }

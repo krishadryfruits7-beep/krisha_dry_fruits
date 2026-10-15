@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
-import { Star, ArrowLeft, Plus, Minus, Check, ShoppingBag, Truck, ShieldCheck, ChevronRight, ArrowRight } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Star, ArrowLeft, Plus, Minus, Check, ShoppingBag, Truck, ShieldCheck, ChevronRight, ArrowRight, Lock } from 'lucide-react';
 import type { Product, CashewType, Quantity } from '@/types';
 import { formatPrice } from '@/data';
 import { useCart } from '@/cart-context';
 import { useSiteContent } from '@/site-content';
+import { useUser, useClerk } from '@/auth';
 
 interface ProductDetailProps {
   product: Product;
@@ -34,13 +35,25 @@ export default function ProductDetail({
 }: ProductDetailProps) {
   const { addItem } = useCart();
   const siteContent = useSiteContent();
+  const { isSignedIn } = useUser();
+  const clerk = useClerk();
 
-  const firstType = product.types[0];
+  const firstType = (product.types || [])[0];
   const [selectedType, setSelectedType] = useState<CashewType>(firstType?.type as CashewType);
-  const [selectedQty, setSelectedQty] = useState<Quantity>(firstType?.prices[0]?.quantity as Quantity);
+  const [selectedQty, setSelectedQty] = useState<Quantity>(firstType?.prices?.[0]?.quantity as Quantity);
   const [activeImage, setActiveImage] = useState(0);
   const [count, setCount] = useState(1);
   const [added, setAdded] = useState(false);
+
+  // Synchronize selections whenever viewed product changes
+  useEffect(() => {
+    const first = (product.types || [])[0];
+    setSelectedType(first?.type as CashewType);
+    setSelectedQty(first?.prices?.[0]?.quantity as Quantity);
+    setActiveImage(0);
+    setCount(1);
+    setAdded(false);
+  }, [product.id, (product as any)._id]);
 
   const siblingProducts = useMemo(() => {
     if (!allProducts || allProducts.length === 0) return [];
@@ -54,7 +67,7 @@ export default function ProductDetail({
   }, [allProducts, product]);
 
   const currentType = useMemo(
-    () => product.types.find((t) => t.type === selectedType) ?? firstType,
+    () => (product.types || []).find((t) => t.type === selectedType) ?? firstType,
     [product, selectedType, firstType]
   );
 
@@ -79,8 +92,8 @@ export default function ProductDetail({
 
   const handleTypeChange = (type: CashewType) => {
     setSelectedType(type);
-    const t = product.types.find((t) => t.type === type);
-    if (t?.prices[0]) setSelectedQty(t.prices[0].quantity as Quantity);
+    const t = (product.types || []).find((t) => t.type === type);
+    if (t?.prices?.[0]) setSelectedQty(t.prices[0].quantity as Quantity);
     if (t?.image) {
       const idx = gallery.indexOf(t.image);
       if (idx !== -1) setActiveImage(idx);
@@ -89,6 +102,10 @@ export default function ProductDetail({
   };
 
   const handleAddToCart = () => {
+    if (!isSignedIn) {
+      clerk?.openSignIn?.({ fallbackRedirectUrl: window.location.href });
+      return;
+    }
     if (!currentType || !currentPrice) return;
     for (let i = 0; i < count; i++) {
       addItem(product, selectedType, selectedQty, currentPrice, currentType.image || product.image);
@@ -339,7 +356,20 @@ export default function ProductDetail({
             </div>
 
             {/* Desktop Add to Cart Button */}
-            {!added ? (
+            {!isSignedIn ? (
+              <div className="space-y-2">
+                <button
+                  onClick={() => clerk?.openSignIn?.({ fallbackRedirectUrl: window.location.href })}
+                  className="w-full btn-primary py-3.5 text-sm font-semibold tracking-wide flex items-center justify-center gap-2 shadow-md bg-amber-700 hover:bg-amber-800 text-cream-50"
+                >
+                  <Lock className="w-4 h-4 text-amber-200" />
+                  <span>Sign In to Add to Cart • {currentPrice ? formatPrice(currentPrice.price * count) : ''}</span>
+                </button>
+                <p className="text-[11.5px] text-brand-600 text-center font-medium">
+                  🔒 Please sign in with Google to add products to your cart.
+                </p>
+              </div>
+            ) : !added ? (
               <button
                 onClick={handleAddToCart}
                 className="w-full btn-primary py-3.5 text-sm font-semibold tracking-wide flex items-center justify-center gap-2 shadow-md shadow-brand-900/15"
@@ -411,7 +441,7 @@ export default function ProductDetail({
             </div>
             <div className="flex justify-between py-1">
               <span className="text-brand-500 font-medium">Available Varieties</span>
-              <span className="font-semibold text-brand-950">{product.types.map((t) => t.type).join(', ')}</span>
+              <span className="font-semibold text-brand-950">{(product.types || []).map((t) => t.type).join(', ')}</span>
             </div>
           </div>
         </div>
@@ -429,7 +459,15 @@ export default function ProductDetail({
             </div>
           </div>
 
-          {!added ? (
+          {!isSignedIn ? (
+            <button
+              onClick={() => clerk?.openSignIn?.({ fallbackRedirectUrl: window.location.href })}
+              className="rounded-full bg-amber-700 hover:bg-amber-800 text-cream-50 py-3 px-6 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-md transition-colors"
+            >
+              <Lock className="w-4 h-4 text-amber-200" />
+              <span>Sign In to Add</span>
+            </button>
+          ) : !added ? (
             <button
               onClick={handleAddToCart}
               className="btn-primary py-3 px-6 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-md shadow-brand-950/20"

@@ -1,6 +1,7 @@
-import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, ShieldCheck } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Lock, LogIn } from 'lucide-react';
 import { useCart } from '@/cart-context';
 import { formatPrice } from '@/data';
+import { useUser, useClerk } from '@/auth';
 
 interface CartDrawerProps {
   open: boolean;
@@ -10,6 +11,8 @@ interface CartDrawerProps {
 
 export default function CartDrawer({ open, onClose, onCheckout }: CartDrawerProps) {
   const { items, removeItem, updateCount, subtotal, totalItems } = useCart();
+  const { isSignedIn } = useUser();
+  const clerk = useClerk();
 
   const FREE_SHIPPING_THRESHOLD = 2000;
   const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : 80;
@@ -79,7 +82,27 @@ export default function CartDrawer({ open, onClose, onCheckout }: CartDrawerProp
 
         {/* Cart Items List */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3.5">
-          {items.length === 0 ? (
+          {!isSignedIn ? (
+            <div className="flex flex-col items-center justify-center h-full text-center py-12 px-4 animate-fade-in">
+              <div className="w-16 h-16 rounded-2xl bg-amber-100/80 border border-amber-200 text-amber-700 flex items-center justify-center mb-4 shadow-sm">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="font-serif text-xl font-bold text-brand-950 mb-1.5">Sign In to View Cart</h3>
+              <p className="text-xs sm:text-sm text-brand-600 max-w-xs mb-6 leading-relaxed">
+                Please sign in with Google to add products to your cart and place orders.
+              </p>
+              <button
+                onClick={() => {
+                  onClose();
+                  clerk?.openSignIn?.({ fallbackRedirectUrl: window.location.href });
+                }}
+                className="btn-primary text-xs sm:text-sm py-3 px-6 bg-brand-950 hover:bg-brand-900 flex items-center gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Sign In with Google</span>
+              </button>
+            </div>
+          ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
               <div className="w-20 h-20 rounded-full bg-brand-100/70 flex items-center justify-center mb-4 text-brand-400">
                 <ShoppingBag className="w-10 h-10 stroke-[1.5]" />

@@ -6,16 +6,19 @@ const PRODUCTS_STORAGE_KEY = 'kdf_products_catalog_v2';
 const PRODUCTS_EVENT = 'kdf_products_catalog_change';
 
 export function getStoredProducts(): Product[] {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined') return PRODUCTS;
   try {
     const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
     if (!raw) {
-      return [];
+      return PRODUCTS;
     }
     const list: Product[] = JSON.parse(raw);
-    return Array.isArray(list) ? list : [];
+    if (Array.isArray(list) && list.length > 0) {
+      return list;
+    }
+    return PRODUCTS;
   } catch {
-    return [];
+    return PRODUCTS;
   }
 }
 

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Package, Clock, Truck, CheckCircle2, XCircle, Search, MapPin, ChevronDown, ChevronUp, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Package, Clock, Truck, CheckCircle2, XCircle, Search, MapPin, ChevronDown, ChevronUp, ShoppingBag, ShieldCheck, Loader2 } from 'lucide-react';
 import { useUser, useClerk } from '@/auth';
 import { api } from '@/api';
 import { formatPrice } from '@/data';
-import { useCustomerOrders, updateCustomerOrderStatus } from '@/orders-storage';
+import { useCustomerOrders, updateCustomerOrderStatus, saveCustomerOrder } from '@/orders-storage';
 import type { OrderDetails } from '@/types';
 
 interface MyOrdersProps {
@@ -32,6 +32,8 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
   const [searchFilter, setSearchFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
 
   // Sync server orders if user is signed in
   useEffect(() => {
@@ -74,6 +76,53 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
       );
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const handleLookupOrder = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const q = searchFilter.trim();
+    if (!q) return;
+
+    setLookingUp(true);
+    setLookupError(null);
+    try {
+      if (q.includes('@')) {
+        const res = await api.orders.listByUser(q);
+        if (Array.isArray(res?.orders) && res.orders.length > 0) {
+          setServerOrders((prev) => {
+            const map = new Map<string, any>();
+            [...prev, ...res.orders].forEach((o: any) => {
+              const id = o.orderId || o._id;
+              if (id) map.set(id, o);
+            });
+            return Array.from(map.values());
+          });
+          res.orders.forEach((o: any) => saveCustomerOrder(o));
+          setExpandedId(res.orders[0].orderId || res.orders[0]._id);
+          return;
+        }
+      } else {
+        const res = await api.orders.get(q);
+        if (res && (res.orderId || res._id)) {
+          setServerOrders((prev) => {
+            const map = new Map<string, any>();
+            [...prev, res].forEach((o: any) => {
+              const id = o.orderId || o._id;
+              if (id) map.set(id, o);
+            });
+            return Array.from(map.values());
+          });
+          saveCustomerOrder(res);
+          setExpandedId(res.orderId || res._id);
+          return;
+        }
+      }
+      setLookupError(`No order found matching "${q}". Please check the Order ID or email.`);
+    } catch {
+      setLookupError(`Could not find an order matching "${q}". Please check the order number.`);
+    } finally {
+      setLookingUp(false);
     }
   };
 
@@ -154,18 +203,27 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
           </p>
         </div>
 
-        {allOrders.length > 1 && (
-          <div className="relative w-full sm:w-64">
+        <form onSubmit={handleLookupOrder} className="relative w-full sm:w-72 flex items-center gap-1.5">
+          <div className="relative flex-1">
             <input
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Search by Order ID or Grade..."
-              className="w-full text-xs rounded-full border border-brand-200 bg-white pl-9 pr-4 py-2 text-brand-950 placeholder-brand-400 focus:outline-none focus:border-brand-600"
+              placeholder="Search or enter Order ID..."
+              className="w-full text-xs rounded-full border border-brand-200 bg-white pl-8 pr-3 py-2 text-brand-950 placeholder-brand-400 focus:outline-none focus:border-brand-600"
             />
-            <Search className="w-3.5 h-3.5 text-brand-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-brand-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
           </div>
-        )}
+          {searchFilter.trim() && (
+            <button
+              type="submit"
+              disabled={lookingUp}
+              className="px-3 py-2 rounded-full bg-brand-950 hover:bg-brand-900 text-cream-50 text-xs font-semibold shrink-0 disabled:opacity-50 flex items-center gap-1"
+            >
+              {lookingUp ? <Loader2 className="w-3 h-3 animate-spin" /> : <span>Track</span>}
+            </button>
+          )}
+        </form>
       </div>
 
       {/* Guest Sync Banner if not signed in */}
@@ -186,21 +244,47 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
 
       {/* Empty State */}
       {filteredOrders.length === 0 && (
-        <div className="card p-10 sm:p-14 text-center max-w-lg mx-auto shadow-luxury border border-brand-200/60">
+        <div className="card p-8 sm:p-12 text-center max-w-lg mx-auto shadow-luxury border border-brand-200/60">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-100/70 text-brand-600 flex items-center justify-center">
             <Package className="w-8 h-8 stroke-[1.5]" />
           </div>
           <h2 className="font-serif text-xl font-bold text-brand-950 mb-2">
-            No Orders Found
+            {searchFilter ? 'Order Not in Browser Cache' : 'Track Your Order or Browse Catalog'}
           </h2>
           <p className="text-xs sm:text-sm text-brand-600 mb-6 leading-relaxed">
             {searchFilter
-              ? `No orders matching "${searchFilter}". Check your order number and try again.`
-              : 'You have not placed any orders yet. Explore our premium cashew grades and treat yourself to royal freshness.'}
+              ? `No local order matching "${searchFilter}". You can search our live database directly:`
+              : 'Have an Order ID or want to look up an order placed on another phone or computer? Enter it below:'}
           </p>
+
+          {/* Direct Live Lookup */}
+          <form onSubmit={handleLookupOrder} className="flex gap-2 max-w-md mx-auto mb-5">
+            <input
+              type="text"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Enter Order ID (e.g. KDF123456) or Email"
+              className="flex-1 text-xs rounded-full border border-brand-200 bg-white px-4 py-2.5 text-brand-950 placeholder-brand-400 focus:outline-none focus:border-brand-600"
+            />
+            <button
+              type="submit"
+              disabled={lookingUp || !searchFilter.trim()}
+              className="btn-primary py-2.5 px-5 text-xs font-semibold rounded-full disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {lookingUp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+              <span>{lookingUp ? 'Tracking...' : 'Track'}</span>
+            </button>
+          </form>
+
+          {lookupError && (
+            <p className="text-xs text-red-600 font-medium mb-5 bg-red-50 p-2.5 rounded-xl border border-red-200">
+              {lookupError}
+            </p>
+          )}
+
           <button
             onClick={onShop || onBack}
-            className="btn-primary py-3 px-7 text-xs sm:text-sm font-semibold inline-flex items-center gap-2"
+            className="btn-secondary py-2.5 px-6 text-xs sm:text-sm font-semibold inline-flex items-center gap-2"
           >
             <ShoppingBag className="w-4 h-4" />
             <span>Shop Premium Cashews</span>

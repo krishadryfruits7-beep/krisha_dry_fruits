@@ -10,6 +10,7 @@ export interface ISiteContentDoc extends Document {
   contact: Record<string, any>;
   social: Record<string, any>;
   footerBio: string;
+  adminEmails?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +26,7 @@ const SiteContentSchema = new Schema(
     contact: { type: Schema.Types.Mixed, default: {} },
     social: { type: Schema.Types.Mixed, default: {} },
     footerBio: { type: String, default: '' },
+    adminEmails: [{ type: String }],
   },
   { timestamps: true }
 );
