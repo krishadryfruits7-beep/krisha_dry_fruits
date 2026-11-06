@@ -33,9 +33,33 @@ import {
   updateStoredProduct,
   deleteStoredProduct,
 } from '@/products-storage';
+import { getAllCategories, saveCustomCategory, type CategoryChoice } from '@/categories-storage';
 
-const DEFAULT_PRESET_GRADES = ['W120', 'W180', 'W210', 'W240', 'W320', 'W334', 'S354', 'W450'];
-const ALL_TYPES = ['Raw', 'Roasted', 'Roasted & Salted', 'Fried & Salted', 'Pepper Spiced', 'Honey Glazed'];
+const CATEGORY_GRADE_PRESETS: Record<string, string[]> = {
+  cashews: ['W180', 'W210', 'W240', 'W320', 'Splits'],
+  almonds: ['California Jumbo', 'Mamra Extra', 'Gurbandi', 'Standard'],
+  walnuts: ['Snow White Halves', 'Chilean Extra Light', 'In-Shell'],
+  pistachios: ['Akbari Jumbo', 'Roasted Crunch', 'Emerald Kernels'],
+  dates: ['Medjool Jumbo', 'Ajwa Royal', 'Kimia Soft', 'Standard'],
+  figs: ['Afghan Long Green', 'Jumbo Golden', 'Standard'],
+  raisins: ['Golden Jumbo', 'Long Green', 'Black Seedless', 'Standard'],
+  'berries-seeds': ['7-in-1 Raw Seeds', 'Super Berry Mix', 'Standard'],
+  'gift-boxes': ['Imperial Keepsake', 'Festive Gold Box', 'Royal Chest', 'Standard'],
+};
+
+const CATEGORY_CHOICES = [
+  { id: 'almonds', label: 'Almonds (बादाम)' },
+  { id: 'cashews', label: 'Cashews (काजू)' },
+  { id: 'walnuts', label: 'Walnuts (अखरोट)' },
+  { id: 'pistachios', label: 'Pistachios (पिस्ता)' },
+  { id: 'dates', label: 'Dates (खजूर)' },
+  { id: 'figs', label: 'Figs / Anjeer (अंजीर)' },
+  { id: 'raisins', label: 'Raisins / Kishmish (किशमिश)' },
+  { id: 'berries-seeds', label: 'Seeds & Berries (बीज और जामुन)' },
+  { id: 'gift-boxes', label: 'Gift Boxes & Hampers (गिफ्ट बॉक्स)' },
+];
+
+const ALL_TYPES = ['Raw', 'Roasted', 'Roasted & Salted', 'Lightly Salted', 'Smoked', 'Fried & Salted', 'Pepper Spiced', 'Honey Glazed', 'Assorted 4-in-1'];
 const DEFAULT_QUANTITIES = ['250g', '500g', '1kg', '2kg', '5kg'];
 
 function makeType(type: string) {
@@ -50,16 +74,18 @@ function makeType(type: string) {
 
 function emptyProduct() {
   return {
+    category: 'almonds',
+    categoryLabel: 'Almonds',
     grade: '',
     name: '',
     tagline: '',
     description: '',
     longDescription: '',
-    origin: 'Goa & Karnataka Coast, India',
+    origin: 'California, USA',
     gradeDescription: '',
-    image: '/cashew_single_nut.jpg',
+    image: 'https://images.pexels.com/photos/12326584/pexels-photo-12326584.jpeg?auto=compress&cs=tinysrgb&h=800&w=1200',
     gallery: ['', '', '', ''] as string[],
-    badge: 'Premium',
+    badge: 'Premium Quality',
     active: true,
     priority: 0,
     types: ALL_TYPES.map((t, idx) => {
@@ -67,11 +93,9 @@ function emptyProduct() {
       if (idx === 0) {
         base.enabled = true;
         base.prices = [
-          { quantity: '250g', price: 290 },
-          { quantity: '500g', price: 560 },
-          { quantity: '1kg', price: 1080 },
-          { quantity: '2kg', price: 2100 },
-          { quantity: '5kg', price: 5000 },
+          { quantity: '250g', price: 280 },
+          { quantity: '500g', price: 540 },
+          { quantity: '1kg', price: 1050 },
         ];
       }
       return base;
@@ -100,9 +124,30 @@ export default function AdminProducts() {
   const pendingField = useRef<string | null>(null);
 
   const [adminSearch, setAdminSearch] = useState('');
+  const [filterCategory, setFilterCategory] = useState('ALL');
   const [filterGrade, setFilterGrade] = useState('ALL');
   const [filterOrigin, setFilterOrigin] = useState('ALL');
   const [customVariety, setCustomVariety] = useState('');
+  const [showNewCatInput, setShowNewCatInput] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+
+  const allCategories = getAllCategories(products);
+
+  const handleCreateCategory = () => {
+    const trimmed = newCatName.trim();
+    if (!trimmed) return;
+    const slug = trimmed
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-');
+    const newCat = { id: slug || `cat-${Date.now()}`, label: trimmed };
+    saveCustomCategory(newCat);
+    setField('category', newCat.id);
+    setField('categoryLabel', trimmed.split('(')[0].trim());
+    setNewCatName('');
+    setShowNewCatInput(false);
+    showToast(`Category "${trimmed}" created & selected!`, 'success');
+  };
 
   const load = () => {
     setLoading(true);
@@ -327,12 +372,7 @@ export default function AdminProducts() {
     }));
   };
 
-  const availablePresetGrades = Array.from(
-    new Set([
-      ...DEFAULT_PRESET_GRADES,
-      ...products.map((p) => (p.grade || '').toUpperCase()).filter(Boolean),
-    ])
-  );
+  const availablePresetGrades = CATEGORY_GRADE_PRESETS[form.category] || ['Standard', 'Jumbo', 'Premium'];
 
   const triggerUpload = (field: string) => {
     pendingField.current = field;
@@ -429,14 +469,10 @@ export default function AdminProducts() {
       showToast('Main product image is required', 'error');
       return;
     }
-    if (!form.grade || !form.grade.trim()) {
-      showToast('Please enter a cashew grade code (e.g. W120, W180, S354)', 'error');
-      return;
-    }
 
     setSaving(true);
     try {
-      const cleanGrade = form.grade.trim().toUpperCase();
+      const cleanGrade = (form.grade || '').trim().toUpperCase() || 'STANDARD';
       const payload = {
         ...form,
         grade: cleanGrade,
@@ -444,8 +480,8 @@ export default function AdminProducts() {
         gallery: form.gallery.filter(Boolean),
         types: enabledTypes.map(({ enabled: _, ...t }: any) => ({
           ...t,
-          description: t.description || `Fresh premium ${t.type || 'cashew'} kernels`,
-          image: t.image || form.image || '/cashew_single_nut.jpg',
+          description: t.description || `Fresh premium ${t.type || 'grade'}`,
+          image: t.image || form.image,
         })),
       };
 
@@ -490,10 +526,10 @@ export default function AdminProducts() {
         <div className="flex items-center justify-between pb-4 border-b border-brand-200">
           <div>
             <h1 className="font-serif text-2xl font-bold text-brand-950">
-              {editProduct ? `Edit ${editProduct.name}` : 'Add New Cashew Grade'}
+              {editProduct ? `Edit Product: ${editProduct.name}` : 'Add New Product'}
             </h1>
             <p className="text-xs text-brand-500 mt-0.5">
-              Configure cashew grading attributes, images, varieties, and tiered weight pricing.
+              Add product details, photos, weight pricing (250g, 500g, 1kg), and descriptions for your store.
             </p>
           </div>
           <button
@@ -510,18 +546,85 @@ export default function AdminProducts() {
           {/* Card 1: Basic Information */}
           <div className="card p-6 bg-white border border-brand-200/70 shadow-luxury space-y-4">
             <h2 className="font-serif text-base font-bold text-brand-950 border-b border-brand-100 pb-2">
-              1. Grade & Marketing Essentials
+              1. Product Category & Essentials
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-brand-900 block">
+                    Product Category *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCatInput(!showNewCatInput)}
+                    className="text-[11px] font-semibold text-brand-700 hover:text-brand-950 flex items-center gap-1 bg-cream-100 hover:bg-cream-200 px-2 py-0.5 rounded-lg border border-brand-200 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Create New Category</span>
+                  </button>
+                </div>
+
+                {/* Inline New Category Creator */}
+                {showNewCatInput && (
+                  <div className="mb-2 p-3 bg-cream-100/70 rounded-xl border border-brand-300 space-y-2 animate-fade-in">
+                    <span className="text-[11px] font-bold text-brand-900 block">Create & Select New Category:</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={newCatName}
+                        onChange={(e) => setNewCatName(e.target.value)}
+                        placeholder="e.g. Fox Nuts / Makhana (मखाना), Saffron & Spices, Honey"
+                        className="input-field text-xs py-2 bg-white flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateCategory();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateCategory}
+                        className="btn-primary text-xs py-2 px-3 shrink-0"
+                      >
+                        Add Category
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowNewCatInput(false); setNewCatName(''); }}
+                        className="p-2 text-brand-500 hover:text-brand-950"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <select
+                  value={form.category || 'almonds'}
+                  onChange={(e) => {
+                    const c = e.target.value;
+                    const opt = allCategories.find((x) => x.id === c);
+                    setField('category', c);
+                    setField('categoryLabel', opt ? opt.label.split('(')[0].trim() : c);
+                  }}
+                  className="input-field text-sm py-2.5 font-semibold bg-white"
+                >
+                  {allCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
                   <label className="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-                    <span>Cashew Grade Code</span>
-                    <span className="text-red-500">*</span>
-                    <span className="text-[11px] font-normal text-brand-500">(Type any custom grade or pick a preset)</span>
+                    <span>Grade / Variety</span>
+                    <span className="text-[11px] font-normal text-brand-500">(Optional — e.g. W180 for Cashews, Mamra for Almonds, or leave blank)</span>
                   </label>
-                  {form.grade && (
+                  {form.grade && form.category === 'cashews' && (
                     <button
                       type="button"
                       onClick={() => autoFillGradeDetails(form.grade)}
@@ -539,12 +642,10 @@ export default function AdminProducts() {
                     type="text"
                     value={form.grade}
                     onChange={(e) => {
-                      const val = e.target.value.toUpperCase();
-                      setField('grade', val);
+                      setField('grade', e.target.value);
                     }}
-                    placeholder="Enter any grade (e.g. W120, W334, S354, W180, etc.)"
-                    className="input-field text-sm py-2.5 font-mono uppercase tracking-wider font-semibold placeholder:font-sans placeholder:normal-case placeholder:font-normal"
-                    required
+                    placeholder="e.g. W180, Mamra, Jumbo, or leave empty for Standard"
+                    className="input-field text-sm py-2.5 font-medium placeholder:font-normal"
                   />
                   {form.grade && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-900 border border-brand-200">
@@ -556,11 +657,11 @@ export default function AdminProducts() {
                 {/* Preset Chips */}
                 <div className="mt-2.5">
                   <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-semibold text-brand-600">
-                    <span>Quick Grade Presets:</span>
-                    <span className="text-brand-400 font-normal">Click any to quick-select</span>
+                    <span>Popular Varieties for {form.categoryLabel || form.category}:</span>
+                    <span className="text-brand-400 font-normal">Optional click to fill</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 items-center">
-                    {availablePresetGrades.map((g) => {
+                    {(CATEGORY_GRADE_PRESETS[form.category] || ['Standard', 'Jumbo', 'Premium Harvest']).map((g) => {
                       const isSelected = (form.grade || '').toUpperCase() === g.toUpperCase();
                       return (
                         <button
@@ -568,11 +669,11 @@ export default function AdminProducts() {
                           type="button"
                           onClick={() => {
                             setField('grade', g);
-                            if (!form.name || form.name.startsWith('Jumbo King')) {
+                            if (form.category === 'cashews' && (!form.name || form.name.startsWith('Jumbo King'))) {
                               autoFillGradeDetails(g);
                             }
                           }}
-                          className={`text-xs px-2.5 py-1 rounded-lg border font-mono font-medium transition-all ${
+                          className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-all ${
                             isSelected
                               ? 'bg-brand-900 text-cream-50 border-brand-900 shadow-xs'
                               : 'bg-cream-100/80 hover:bg-cream-200 border-brand-200 text-brand-800'
@@ -623,24 +724,24 @@ export default function AdminProducts() {
               </div>
 
               <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-brand-900 mb-1.5 block">Long Detailed Narrative</label>
-                <textarea value={form.longDescription} onChange={(e) => setField('longDescription', e.target.value)} className="input-field resize-none text-xs sm:text-sm" rows={3} />
+                <label className="text-xs font-bold text-brand-900 mb-1.5 block">Detailed Description (Optional)</label>
+                <textarea value={form.longDescription} onChange={(e) => setField('longDescription', e.target.value)} className="input-field resize-none text-xs sm:text-sm" rows={3} placeholder="Full story, health advantages, and culinary uses..." />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-brand-900 block">Harvest Location / Origin</label>
+                  <label className="text-xs font-bold text-brand-900 block">Origin / Sourced From (Optional)</label>
                   <span className="text-[10px] text-brand-500 font-normal">Optional</span>
                 </div>
                 <input
                   value={form.origin || ''}
                   onChange={(e) => setField('origin', e.target.value)}
                   className="input-field text-xs sm:text-sm py-2.5"
-                  placeholder="e.g. Goa Coastal Belt, Karnataka Malnad"
+                  placeholder="e.g. California, USA · Kashmir · Goa"
                 />
                 <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                   <span className="text-[10px] text-brand-400">Presets:</span>
-                  {['Goa Coastal Belt', 'Karnataka Malnad', 'Goa & Karnataka Coast'].map((loc) => (
+                  {['California, USA', 'Kashmir Valley, India', 'Goa Coastal Belt', 'Saudi Arabia', 'Iran', 'Afghanistan'].map((loc) => (
                     <button
                       key={loc}
                       type="button"
@@ -651,14 +752,11 @@ export default function AdminProducts() {
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-brand-500 mt-1">
-                  * Matches storefront location banners (e.g. Goa, Karnataka)
-                </p>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-brand-900 mb-1.5 block">Grade Size Specifications</label>
-                <input value={form.gradeDescription} onChange={(e) => setField('gradeDescription', e.target.value)} className="input-field text-xs sm:text-sm py-2.5" placeholder="e.g. Approx 180 nuts per pound" />
+                <label className="text-xs font-bold text-brand-900 mb-1.5 block">Size / Quality Note (Optional)</label>
+                <input value={form.gradeDescription} onChange={(e) => setField('gradeDescription', e.target.value)} className="input-field text-xs sm:text-sm py-2.5" placeholder="e.g. Jumbo Size, 100% natural oil, Sun-dried" />
               </div>
             </div>
           </div>
@@ -744,7 +842,7 @@ export default function AdminProducts() {
               3. Varieties & Tiered Weight Pricing (₹)
             </h2>
             <p className="text-xs text-brand-500">
-              Toggle ON which varieties are available for this cashew grade. Set weight increments and customized INR pricing.
+              Select which varieties are available (e.g. Raw, Roasted & Salted) and set your prices for each weight (250g, 500g, 1kg).
             </p>
 
             {/* Custom Variety Add Bar */}
@@ -983,6 +1081,10 @@ export default function AdminProducts() {
       (p.origin && p.origin.toLowerCase().includes(q)) ||
       (p.types && p.types.some((t: any) => t.type && t.type.toLowerCase().includes(q)));
 
+    const matchesCategory =
+      filterCategory === 'ALL' ||
+      (p.category && p.category.toLowerCase() === filterCategory.toLowerCase());
+
     const matchesGrade =
       filterGrade === 'ALL' ||
       (p.grade && p.grade.toUpperCase() === filterGrade.toUpperCase());
@@ -991,7 +1093,7 @@ export default function AdminProducts() {
       filterOrigin === 'ALL' ||
       (p.origin && p.origin.toLowerCase().includes(filterOrigin.toLowerCase()));
 
-    return matchesSearch && matchesGrade && matchesOrigin;
+    return matchesSearch && matchesCategory && matchesGrade && matchesOrigin;
   });
 
   return (
@@ -1003,7 +1105,7 @@ export default function AdminProducts() {
             Product Catalogue
           </h1>
           <p className="text-xs sm:text-sm text-brand-500 mt-1">
-            {products.length} cashew grades and regional harvests configured in active database.
+            {products.length} active products in your store catalog.
           </p>
         </div>
 
@@ -1029,7 +1131,7 @@ export default function AdminProducts() {
             className="btn-primary text-xs py-2 px-4.5 font-semibold flex items-center gap-1.5 shadow-md shadow-brand-900/15"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Grade / Product</span>
+            <span>Add New Product</span>
           </button>
         </div>
       </div>
@@ -1042,7 +1144,7 @@ export default function AdminProducts() {
             <input
               value={adminSearch}
               onChange={(e) => setAdminSearch(e.target.value)}
-              placeholder="Search by grade (e.g. W180), name, origin (Goa, Karnataka), or variety (Fried, Roasted)..."
+              placeholder="Search by name, grade, origin, category, or variety..."
               className="input-field text-xs sm:text-sm py-2 pl-9 bg-cream-50/50"
             />
             {adminSearch && (
@@ -1060,73 +1162,68 @@ export default function AdminProducts() {
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-brand-100 text-xs">
-          <span className="text-brand-400 font-semibold text-[11px] uppercase tracking-wider">Filter Grade:</span>
-          <button
-            onClick={() => setFilterGrade('ALL')}
-            className={`px-2.5 py-1 rounded-lg font-mono text-xs transition-colors ${
-              filterGrade === 'ALL'
-                ? 'bg-brand-900 text-white font-bold'
-                : 'bg-cream-100 hover:bg-cream-200 text-brand-700'
-            }`}
-          >
-            All
-          </button>
-          {allGrades.map((g) => (
-            <button
-              key={g}
-              onClick={() => setFilterGrade(g)}
-              className={`px-2.5 py-1 rounded-lg font-mono text-xs transition-colors ${
-                filterGrade === g
-                  ? 'bg-brand-900 text-white font-bold'
-                  : 'bg-cream-100 hover:bg-cream-200 text-brand-700'
-              }`}
+        {/* Compact 1-Line Filters */}
+        <div className="flex flex-wrap items-center gap-2.5 pt-2.5 border-t border-brand-100 text-xs">
+          {/* Category Dropdown */}
+          <div className="flex items-center gap-1.5 bg-cream-50/80 hover:bg-cream-100/80 px-3 py-1.5 rounded-xl border border-brand-200 transition-colors">
+            <span className="text-[11px] font-bold text-brand-600">Category:</span>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-brand-950 focus:outline-none cursor-pointer"
             >
-              {g}
-            </button>
-          ))}
-
-          {allOrigins.length > 0 && (
-            <>
-              <span className="text-brand-300 mx-1">|</span>
-              <span className="text-brand-400 font-semibold text-[11px] uppercase tracking-wider">Origin:</span>
-              <button
-                onClick={() => setFilterOrigin('ALL')}
-                className={`px-2.5 py-1 rounded-lg text-xs transition-colors ${
-                  filterOrigin === 'ALL'
-                    ? 'bg-forest-800 text-white font-bold'
-                    : 'bg-cream-100 hover:bg-cream-200 text-brand-700'
-                }`}
-              >
-                All Origins
-              </button>
-              {allOrigins.map((orig) => (
-                <button
-                  key={orig}
-                  onClick={() => setFilterOrigin(orig)}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors ${
-                    filterOrigin === orig
-                      ? 'bg-forest-800 text-white font-bold'
-                      : 'bg-cream-100 hover:bg-cream-200 text-brand-700'
-                  }`}
-                >
-                  📍 {orig}
-                </button>
+              <option value="ALL">All Categories</option>
+              {allCategories.map((c) => (
+                <option key={c.id} value={c.id}>{c.label}</option>
               ))}
-            </>
+            </select>
+          </div>
+
+          {/* Grade Dropdown */}
+          <div className="flex items-center gap-1.5 bg-cream-50/80 hover:bg-cream-100/80 px-3 py-1.5 rounded-xl border border-brand-200 transition-colors">
+            <span className="text-[11px] font-bold text-brand-600">Grade:</span>
+            <select
+              value={filterGrade}
+              onChange={(e) => setFilterGrade(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-brand-950 focus:outline-none cursor-pointer font-mono"
+            >
+              <option value="ALL">All Grades ({allGrades.length})</option>
+              {allGrades.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Origin Dropdown */}
+          {allOrigins.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-cream-50/80 hover:bg-cream-100/80 px-3 py-1.5 rounded-xl border border-brand-200 transition-colors">
+              <span className="text-[11px] font-bold text-brand-600">Origin:</span>
+              <select
+                value={filterOrigin}
+                onChange={(e) => setFilterOrigin(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-brand-950 focus:outline-none cursor-pointer"
+              >
+                <option value="ALL">All Origins ({allOrigins.length})</option>
+                {allOrigins.map((orig) => (
+                  <option key={orig} value={orig}>📍 {orig}</option>
+                ))}
+              </select>
+            </div>
           )}
 
-          {(filterGrade !== 'ALL' || filterOrigin !== 'ALL' || adminSearch) && (
+          {/* Reset Filters */}
+          {(filterCategory !== 'ALL' || filterGrade !== 'ALL' || filterOrigin !== 'ALL' || adminSearch) && (
             <button
               onClick={() => {
+                setFilterCategory('ALL');
                 setFilterGrade('ALL');
                 setFilterOrigin('ALL');
                 setAdminSearch('');
               }}
-              className="text-[11px] text-red-600 hover:text-red-800 underline ml-auto font-medium"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 border border-red-200 transition-colors flex items-center gap-1 ml-auto"
             >
-              Reset Filters
+              <X className="w-3.5 h-3.5" />
+              <span>Reset Filters</span>
             </button>
           )}
         </div>
@@ -1321,7 +1418,7 @@ export default function AdminProducts() {
                 </button>
               )}
               <button onClick={openAdd} className="btn-primary py-2 px-5 text-xs">
-                Add Grade / Product
+                Add New Product
               </button>
             </div>
           )}

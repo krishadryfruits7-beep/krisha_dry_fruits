@@ -8,7 +8,7 @@ import {
   type DeliverySettings,
 } from './site-content-defaults';
 
-const STORAGE_KEY = 'kdf_site_content_v2';
+const STORAGE_KEY = 'kdf_site_content_v4';
 const EVENT_NAME = 'kdf_site_content_change';
 
 export function extractCoordinatesFromMapsUrl(rawUrl?: string | null): { lat: string; lng: string } | null {
@@ -284,11 +284,13 @@ export function getSiteContent(): SiteContent {
     return {
       ...DEFAULT_SITE_CONTENT,
       ...parsed,
+      logo: parsed.logo || DEFAULT_SITE_CONTENT.logo,
       hero: { ...DEFAULT_SITE_CONTENT.hero, ...(parsed.hero || {}) },
       heroSlides: Array.isArray(parsed.heroSlides) && parsed.heroSlides.length > 0 ? parsed.heroSlides : DEFAULT_SITE_CONTENT.heroSlides,
       contact,
       delivery: { ...DEFAULT_DELIVERY_SETTINGS, ...(parsed.delivery || {}) },
       social: { ...DEFAULT_SITE_CONTENT.social, ...(parsed.social || {}) },
+      categoryBanners: Array.isArray(parsed.categoryBanners) && parsed.categoryBanners.length > 0 ? parsed.categoryBanners : DEFAULT_SITE_CONTENT.categoryBanners,
       features: Array.isArray(parsed.features) ? parsed.features : DEFAULT_SITE_CONTENT.features,
       locationBanners: Array.isArray(parsed.locationBanners) ? parsed.locationBanners : [],
     };
@@ -322,8 +324,10 @@ export function syncWithServerContent(serverData: Partial<SiteContent> | null | 
   const merged: SiteContent = {
     ...DEFAULT_SITE_CONTENT,
     ...serverData,
+    logo: serverData.logo || DEFAULT_SITE_CONTENT.logo,
     hero: { ...DEFAULT_SITE_CONTENT.hero, ...(serverData.hero || {}) },
     heroSlides: Array.isArray(serverData.heroSlides) && serverData.heroSlides.length > 0 ? serverData.heroSlides : DEFAULT_SITE_CONTENT.heroSlides,
+    categoryBanners: Array.isArray(serverData.categoryBanners) && serverData.categoryBanners.length > 0 ? serverData.categoryBanners : DEFAULT_SITE_CONTENT.categoryBanners,
     contact,
     delivery: { ...DEFAULT_DELIVERY_SETTINGS, ...(serverData.delivery || {}) },
     social: { ...DEFAULT_SITE_CONTENT.social, ...(serverData.social || {}) },

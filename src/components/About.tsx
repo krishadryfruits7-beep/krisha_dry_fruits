@@ -1,89 +1,82 @@
-import { Leaf, Award, Heart, Users } from 'lucide-react';
+import { Leaf, Award, Heart, Users, Sparkles, MapPin, Check } from 'lucide-react';
 
 export default function About() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-cream-200 to-brand-50 py-16">
+      <section className="bg-gradient-to-br from-cream-200 to-brand-50 py-16 sm:py-20 border-b border-brand-200/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-brand-100 px-4 py-1.5 mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full bg-brand-100 px-4 py-1.5 mb-6 border border-brand-200">
             <Leaf className="w-3.5 h-3.5 text-brand-600" />
-            <span className="text-xs font-semibold text-brand-700 tracking-wide">Our Story</span>
+            <span className="text-xs font-bold text-brand-800 tracking-wide uppercase">Our Heritage & Sourcing</span>
           </div>
           <h1 className="font-serif text-4xl lg:text-5xl font-bold text-brand-950 mb-6">
-            From coast to <span className="text-brand-600">kitchen</span>
+            From mountain valleys & coastal groves to <span className="text-brand-700">your home</span>
           </h1>
-          <p className="text-lg text-brand-700 leading-relaxed">
-            Krisha Dry Fruits was born from a simple belief: that the finest cashews deserve to be shared with the world. What began as a family-run farm in Goa has grown into one of India's most trusted premium cashew brands.
+          <p className="text-base sm:text-lg text-brand-700 leading-relaxed max-w-2xl mx-auto">
+            Krisha Dry Fruits was born from a simple conviction: that authentic, chemical-free dry fruits deserve to be experienced in their purest form. What started with coastal harvests in Goa has expanded into a premier dry fruits house in Bengaluru, partnering directly with mountain growers in Kashmir, California, and desert palm oases.
           </p>
         </div>
       </section>
 
       {/* Story */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="rounded-2xl overflow-hidden shadow-lg">
+          <div className="rounded-3xl overflow-hidden shadow-luxury border border-brand-200">
             <img
-              src="https://images.pexels.com/photos/11135641/pexels-photo-11135641.jpeg?auto=compress&cs=tinysrgb&h=650&w=940"
+              src="https://images.pexels.com/photos/11135641/pexels-photo-11135641.jpeg?auto=compress&cs=tinysrgb&h=800&w=1200"
               alt="Dry fruits market display"
-              className="w-full h-[400px] object-cover"
+              className="w-full h-[420px] object-cover"
             />
           </div>
-          <div>
-            <h2 className="font-serif text-3xl font-bold text-brand-950 mb-4">Three generations of craft</h2>
-            <p className="text-brand-700 leading-relaxed mb-4">
-              Our story starts in the 1970s, when our grandfather began cultivating cashew trees along the sun-drenched coast of Goa. He believed in patience — letting nature take its course, harvesting at the right moment, and processing by hand.
+          <div className="space-y-4">
+            <div className="text-xs font-bold text-brand-500 uppercase tracking-wider">Generations of Craftsmanship</div>
+            <h2 className="font-serif text-3xl font-bold text-brand-950">
+              Preserving nature's original oils & flavors
+            </h2>
+            <p className="text-brand-700 leading-relaxed text-sm sm:text-base">
+              Unlike industrial dry fruit processors who strip natural oils, polish nuts with synthetic coatings, or bleach shells, Krisha Dry Fruits adheres to traditional sorting and packaging integrity.
             </p>
-            <p className="text-brand-700 leading-relaxed mb-4">
-              Today, we honour that legacy. We work directly with farmers across Goa and Karnataka, ensuring fair prices and sustainable practices. Every batch is hand-sorted, quality-checked, and packed within 48 hours of processing.
+            <p className="text-brand-700 leading-relaxed text-sm sm:text-base">
+              Our <strong>Kashmiri Mamra Badam</strong> retains 100% of its high-potency oil. Our <strong>Snow White Walnut Halves</strong> are cracked from fresh Pahadi harvest without bitter tannin oxidation. And our <strong>W180 King Cashews</strong> are hand-selected whole kernels sun-dried under Goan coastal breezes.
             </p>
-            <p className="text-brand-700 leading-relaxed">
-              From our family to yours — we promise only the finest.
-            </p>
+            <div className="pt-2 flex flex-col sm:flex-row gap-3">
+              <div className="p-3 rounded-2xl bg-forest-50 border border-forest-200 flex items-center gap-2 text-xs font-bold text-forest-800">
+                <Check className="w-4 h-4 text-forest-600" />
+                <span>Zero Chemical Polish or Wax</span>
+              </div>
+              <div className="p-3 rounded-2xl bg-brand-50 border border-brand-200 flex items-center gap-2 text-xs font-bold text-brand-800">
+                <Check className="w-4 h-4 text-brand-600" />
+                <span>Nitrogen Sealed Freshness</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Values */}
-      <section className="bg-cream-200/50 py-16">
+      <section className="bg-cream-200/50 py-16 border-t border-brand-200/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-3xl font-bold text-brand-950 mb-3">What we stand for</h2>
-            <p className="text-brand-600">The values that guide every cashew we sell.</p>
+            <h2 className="font-serif text-3xl font-bold text-brand-950 mb-3">Our Core Pillars</h2>
+            <p className="text-brand-600 text-sm">The uncompromising standards behind every pouch we pack.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: Leaf, title: 'Sustainability', desc: 'We work with nature, not against it. Eco-friendly farming and minimal-waste packaging.' },
-              { icon: Award, title: 'Quality First', desc: 'Every batch is hand-sorted and quality-checked. We never compromise on standards.' },
-              { icon: Heart, title: 'Fair Trade', desc: 'Direct relationships with farmers ensure fair prices and support local communities.' },
-              { icon: Users, title: 'Customer Care', desc: 'From order to delivery, we treat every customer like family. 100% satisfaction guaranteed.' },
+              { icon: Leaf, title: 'Direct Farm Sourcing', desc: 'No middlemen. We work directly with orchard growers in Kashmir, Goa, and California.' },
+              { icon: Award, title: 'Caliber Guaranteed', desc: 'Every grade is physically inspected and size-certified before airtight vacuum sealing.' },
+              { icon: Heart, title: 'Zero Artificial Polish', desc: '100% raw and natural. No sulfur fumigation, chemical glaze, or artificial coloring.' },
+              { icon: Users, title: 'Doorstep Precision', desc: 'Pinpoint GPS delivery mapping ensures your order reaches your exact home address.' },
             ].map((v) => (
-              <div key={v.title} className="card p-6 text-center hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 rounded-xl bg-brand-100 flex items-center justify-center mx-auto mb-4">
-                  <v.icon className="w-6 h-6 text-brand-600" />
+              <div key={v.title} className="card p-6 text-center hover:shadow-luxury-lg transition-all border border-brand-200/60 bg-white">
+                <div className="w-12 h-12 rounded-2xl bg-brand-100 flex items-center justify-center mx-auto mb-4 text-brand-700">
+                  <v.icon className="w-6 h-6" />
                 </div>
-                <h3 className="font-serif text-base font-semibold text-brand-900 mb-2">{v.title}</h3>
-                <p className="text-sm text-brand-600 leading-relaxed">{v.desc}</p>
+                <h3 className="font-serif text-base font-bold text-brand-950 mb-2">{v.title}</h3>
+                <p className="text-xs text-brand-600 leading-relaxed">{v.desc}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-          {[
-            { num: '50+', label: 'Years of farming' },
-            { num: '3,700+', label: 'Happy customers' },
-            { num: '5', label: 'Premium grades' },
-            { num: '48h', label: 'Fresh packing' },
-          ].map((s) => (
-            <div key={s.label}>
-              <div className="font-serif text-4xl lg:text-5xl font-bold text-brand-600 mb-1">{s.num}</div>
-              <div className="text-sm text-brand-500">{s.label}</div>
-            </div>
-          ))}
         </div>
       </section>
     </div>

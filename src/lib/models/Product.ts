@@ -15,6 +15,8 @@ export interface IGradeType {
 export interface IProduct extends Document {
   grade: string;
   name: string;
+  category: string;
+  categoryLabel?: string;
   tagline: string;
   description: string;
   longDescription: string;
@@ -26,6 +28,8 @@ export interface IProduct extends Document {
   reviewCount: number;
   badge: string;
   types: IGradeType[];
+  healthBenefits?: string[];
+  nutritionalHighlights?: Record<string, string>;
   active: boolean;
   priority: number;
   createdAt: Date;
@@ -48,6 +52,8 @@ const ProductSchema = new Schema<IProduct>(
   {
     grade: { type: String, required: true },
     name: { type: String, required: true },
+    category: { type: String, default: 'cashews' },
+    categoryLabel: { type: String, default: '' },
     tagline: { type: String, default: '' },
     description: { type: String, default: '' },
     longDescription: { type: String, default: '' },
@@ -55,10 +61,12 @@ const ProductSchema = new Schema<IProduct>(
     gradeDescription: { type: String, default: '' },
     image: { type: String, required: true },
     gallery: [{ type: String }],
-    rating: { type: Number, default: 4.5 },
+    rating: { type: Number, default: 4.8 },
     reviewCount: { type: Number, default: 0 },
     badge: { type: String, default: 'Premium' },
     types: [GradeTypeSchema],
+    healthBenefits: [{ type: String }],
+    nutritionalHighlights: { type: Schema.Types.Mixed, default: {} },
     active: { type: Boolean, default: true },
     priority: { type: Number, default: 0 },
   },

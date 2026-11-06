@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Package } from 'lucide-react';
+import { Package, Sparkles } from 'lucide-react';
 import { CartProvider } from '@/cart-context';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Hero from '@/components/Hero';
+import CategoryShowcase from '@/components/CategoryShowcase';
 import Features from '@/components/Features';
 import Testimonials from '@/components/Testimonials';
 import ProductGrid from '@/components/ProductGrid';
@@ -17,12 +18,14 @@ import StoreLocationSection from '@/components/StoreLocationSection';
 import About from '@/components/About';
 import Contact from '@/components/Contact';
 import MyOrders from '@/components/MyOrders';
+import MobileBottomNav from '@/components/MobileBottomNav';
 import { api } from '@/api';
-import type { Product, OrderDetails } from '@/types';
+import type { Product, OrderDetails, ProductCategory } from '@/types';
 import { saveCustomerOrder, getCustomerOrders } from '@/orders-storage';
 import { useStoredProducts, syncWithServerProducts } from '@/products-storage';
-import { syncWithServerContent } from '@/site-content';
+import { syncWithServerContent, useSiteContent } from '@/site-content';
 import { syncWithServerReviews } from '@/reviews-storage';
+import { CATEGORIES } from '@/data';
 
 type Page = 'home' | 'products' | 'grades' | 'about' | 'contact' | 'product' | 'checkout' | 'confirmation' | 'myorders';
 
@@ -46,15 +49,25 @@ function App() {
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderNotFound, setOrderNotFound] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const siteContent = useSiteContent();
+
+  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return (new URLSearchParams(window.location.search).get('category') as ProductCategory) || null;
+  });
+
   const [selectedGrade, setSelectedGrade] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search).get('grade') || null;
   });
+
   const [selectedVariety, setSelectedVariety] = useState<string | null>(null);
+
   const [selectedLocation, setSelectedLocation] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search).get('location') || null;
   });
+
   const products = useStoredProducts();
   const [productsLoading, setProductsLoading] = useState(false);
 
@@ -70,7 +83,7 @@ function App() {
     setProductsLoading(true);
     api.products.list()
       .then((data) => {
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           syncWithServerProducts(data as Product[]);
         }
       })
@@ -89,6 +102,7 @@ function App() {
   const navigate = useCallback((p: string) => {
     setPage(p as Page);
     if (p !== 'products') {
+      setSelectedCategory(null);
       setSelectedLocation(null);
       setSelectedGrade(null);
       setSelectedVariety(null);
@@ -105,7 +119,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // If returning from guest sign-in, redirect immediately to the active product page
+  // Return from guest sign-in rehydration
   useEffect(() => {
     try {
       if (typeof window === 'undefined' || !window.sessionStorage) return;
@@ -118,7 +132,7 @@ function App() {
     } catch {}
   }, [page]);
 
-  // Recover selectedProduct if page is 'product' on mount or when products list changes
+  // Recover selectedProduct if page is 'product' on mount
   useEffect(() => {
     if (page === 'product' && products.length > 0) {
       if (!selectedProduct) {
@@ -147,9 +161,8 @@ function App() {
     }
   }, [page, selectedProduct, products]);
 
-  // Handle browser back/forward and recovery
+  // Browser back/forward history handling
   useEffect(() => {
-    // Initialize history state on first mount
     if (!window.history.state || !window.history.state.page) {
       window.history.replaceState({ page: getInitialPage() }, '', window.location.href);
     }
@@ -165,7 +178,6 @@ function App() {
           return;
         }
 
-        // Fetch directly from server API if not in local storage
         setOrderLoading(true);
         setOrderNotFound(false);
         try {
@@ -192,7 +204,6 @@ function App() {
       }
     };
 
-    // Recover order if on confirmation page
     const initialPage = getInitialPage();
     if (initialPage === 'confirmation' && !order) {
       const searchParams = new URLSearchParams(window.location.search);
@@ -226,11 +237,31 @@ function App() {
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
+    setSelectedCategory(null);
+    setSelectedGrade(null);
+    setSelectedVariety(null);
+    setSelectedLocation(null);
     setPage('products');
+    window.history.pushState({ page: 'products', search: query }, '', `/products?search=${encodeURIComponent(query)}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleSelectCategory = useCallback((catId: string) => {
+    const finalCat = catId === 'all' ? null : (catId as ProductCategory);
+    setSelectedCategory(finalCat);
+    setSelectedGrade(null);
+    setSelectedVariety(null);
+    setSelectedLocation(null);
+    setSearchQuery('');
+    setPage('products');
+    const qs = finalCat ? `?category=${finalCat}` : '';
+    window.history.pushState({ page: 'products', category: finalCat }, '', `/products${qs}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const handleSelectLocation = useCallback((locationKey: string) => {
     setSelectedLocation(locationKey);
+    setSelectedCategory(null);
     setSelectedGrade(null);
     setSelectedVariety(null);
     setSearchQuery('');
@@ -247,6 +278,7 @@ function App() {
       viewProduct(matching[0]);
     } else {
       setSelectedGrade(grade);
+      setSelectedCategory(null);
       setSelectedLocation(null);
       setSelectedVariety(null);
       setSearchQuery('');
@@ -277,37 +309,37 @@ function App() {
     setCartOpen(false);
   }, [page]);
 
-  // Dynamic SEO Title, Description, and Canonical Link based on current page
+  // Dynamic SEO Title & Meta Tags
   useEffect(() => {
-    let title = 'Krisha Dry Fruits (krishadryfruits) | Official Online Store & Cashew Shop';
-    let desc = 'Official online store of Krisha Dry Fruits (krishadryfruits / krishadryfruits.in) & Yeshwanthpur Bangalore flagship shop. Buy premium coastal harvest cashews (W180, W210, W240, W320, W450), California almonds, walnuts, dates, and raisins with free pan-India delivery.';
+    let title = 'Krisha Dry Fruits | Premium Almonds, Walnuts, Cashews, Dates, Figs & Hampers';
+    let desc = 'Official online store of Krisha Dry Fruits, Yeshwanthpur, Bangalore. Buy authentic Kashmiri Mamra Badam, Snow White Walnuts, W180 King Cashews, Saudi Medjool Dates, and Afghan Anjeer with pan-India delivery.';
     let canonical = 'https://krishadryfruits.in/';
 
     switch (page) {
       case 'products':
-        title = 'Buy Premium Cashews & Dry Fruits Online | Krisha Dry Fruits (krishadryfruits)';
-        desc = 'Browse full selection of premium whole cashews (W180, W210, W240, W320, W450), roasted, salted, and raw nuts from Krisha Dry Fruits (krishadryfruits.in), Yeshwanthpur, Bangalore.';
+        title = 'Buy Premium Dry Fruits Online | Almonds, Walnuts, Cashews, Dates & Figs';
+        desc = 'Browse our complete catalog of hand-sorted dry fruits: Kashmiri Mamra Badam, California Almonds, Extra Light Walnuts, Goan Cashews, Medjool Dates, and festive hampers.';
         canonical = 'https://krishadryfruits.in/products';
         break;
       case 'grades':
-        title = 'Cashew Grades Guide (W180 to W450) | Krisha Dry Fruits (krishadryfruits)';
-        desc = 'Understand cashew nut grading standards: W180 King Cashews, W210 Jumbo, W240 Premium, and W320 Classic. Discover count per pound and quality metrics.';
+        title = 'Dry Fruits Quality & Sourcing Guide | Kashmiri Mamra vs California, Cashew Grades';
+        desc = 'Understand dry fruit quality standards: Mamra oil content, Cashew W-counts (W180 to W320), Snow White walnut halves, and Medjool dates.';
         canonical = 'https://krishadryfruits.in/grades';
         break;
       case 'about':
-        title = 'About Krisha Dry Fruits (krishadryfruits) | Direct Orchard Sourcing & Pure Heritage';
-        desc = 'Learn about our passion for coastal cashew harvests and farm-direct quality at Krisha Dry Fruits (krishadryfruits.in). No artificial polishing or chemical processing.';
+        title = 'About Krisha Dry Fruits | Direct Orchard Sourcing & Pure Heritage';
+        desc = 'Learn about our passion for pure orchard harvests, farm-direct relationships across Kashmir, Goa, and California, and zero chemical polish.';
         canonical = 'https://krishadryfruits.in/about';
         break;
       case 'contact':
-        title = 'Contact & Store Location Yeshwanthpur | Krisha Dry Fruits (krishadryfruits)';
-        desc = 'Visit Krisha Dry Fruits physical store in Yeshwanthpur, Bengaluru or shop online at krishadryfruits.in. Get 1-click Google Maps directions, customer support helpline, and store timings.';
+        title = 'Visit Yeshwanthpur Store & Helpline | Krisha Dry Fruits Bengaluru';
+        desc = 'Visit Krisha Dry Fruits physical store in Yeshwanthpur, Bengaluru or shop online. Get 1-click Google Maps directions, helpline, and store timings.';
         canonical = 'https://krishadryfruits.in/contact';
         break;
       case 'product':
         if (selectedProduct) {
-          title = `${selectedProduct.name || selectedProduct.grade} Cashews | Krisha Dry Fruits`;
-          desc = `Buy authentic ${selectedProduct.grade} grade cashews from Krisha Dry Fruits, Yeshwanthpur, Bangalore. Freshly packed with 1-click checkout.`;
+          title = `${selectedProduct.name} | Krisha Dry Fruits`;
+          desc = `${selectedProduct.tagline} - Buy fresh hand-sorted dry fruits online from Krisha Dry Fruits, Yeshwanthpur, Bangalore.`;
           canonical = `https://krishadryfruits.in/product?id=${selectedProduct._id || selectedProduct.id}`;
         }
         break;
@@ -318,7 +350,6 @@ function App() {
     }
 
     document.title = title;
-
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) metaDesc.setAttribute('content', desc);
 
@@ -331,8 +362,11 @@ function App() {
     canonicalLink.setAttribute('href', canonical);
   }, [page, selectedProduct]);
 
+  // Derived filter options
+  const availableCategories = CATEGORIES;
+
   const availableGrades = Array.from(
-    new Set(products.filter((p) => p.active !== false).map((p) => (p.grade || '').trim().toUpperCase()).filter(Boolean))
+    new Set(products.filter((p) => p.active !== false).map((p) => (p.grade || '').trim()).filter(Boolean))
   );
 
   const availableVarieties = Array.from(
@@ -353,77 +387,150 @@ function App() {
     )
   );
 
+  // Multi-attribute filtering logic
   const filteredProducts = products.filter((p) => {
     if (p.active === false) return false;
 
+    // 1. Category Filter (Supports single category or multi-category comma separated list)
+    const activeCatList = selectedCategory
+      ? selectedCategory.split(',').map((c) => c.trim().toLowerCase())
+      : [];
+    const pCat = (p.category || '').toLowerCase();
+
+    const matchesCategory =
+      !selectedCategory ||
+      selectedCategory === 'all' ||
+      activeCatList.includes(pCat) ||
+      (activeCatList.includes('nuts') && ['almonds', 'cashews', 'walnuts', 'pistachios'].includes(pCat)) ||
+      (activeCatList.includes('dates-figs') && ['dates', 'figs'].includes(pCat)) ||
+      (activeCatList.includes('dried-fruits') && ['raisins', 'figs'].includes(pCat)) ||
+      (activeCatList.includes('cashews') && (pCat === 'cashews' || p.grade?.toUpperCase().startsWith('W'))) ||
+      (activeCatList.includes('almonds') && (pCat === 'almonds' || p.name.toLowerCase().includes('almond') || p.name.toLowerCase().includes('mamra') || p.name.toLowerCase().includes('badam'))) ||
+      (activeCatList.includes('walnuts') && (pCat === 'walnuts' || p.name.toLowerCase().includes('walnut') || p.name.toLowerCase().includes('akhrot'))) ||
+      (activeCatList.includes('pistachios') && (pCat === 'pistachios' || p.name.toLowerCase().includes('pistachio') || p.name.toLowerCase().includes('pista'))) ||
+      (activeCatList.includes('dates') && (pCat === 'dates' || p.name.toLowerCase().includes('date') || p.name.toLowerCase().includes('khajoor'))) ||
+      (activeCatList.includes('figs') && (pCat === 'figs' || p.name.toLowerCase().includes('fig') || p.name.toLowerCase().includes('anjeer'))) ||
+      (activeCatList.includes('raisins') && (pCat === 'raisins' || p.name.toLowerCase().includes('raisin') || p.name.toLowerCase().includes('kishmish'))) ||
+      (activeCatList.includes('berries-seeds') && (pCat === 'berries-seeds' || p.name.toLowerCase().includes('seed') || p.name.toLowerCase().includes('cranberry') || p.name.toLowerCase().includes('berry'))) ||
+      (activeCatList.includes('gift-boxes') && (pCat === 'gift-boxes' || p.name.toLowerCase().includes('gift') || p.name.toLowerCase().includes('box') || p.name.toLowerCase().includes('hamper')));
+
+    // 2. Search Query
     const matchesSearch = !searchQuery || (
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.grade.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.tagline.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (p.origin && p.origin.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (p.types && p.types.some((t) => t.type.toLowerCase().includes(searchQuery.toLowerCase())))
+      (p.types && p.types.some((t) => t.type.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+      (p.healthBenefits && p.healthBenefits.some((b) => b.toLowerCase().includes(searchQuery.toLowerCase())))
     );
 
+    // 3. Grade Filter
     const matchesGrade =
       !selectedGrade || selectedGrade === 'ALL' || p.grade.toUpperCase() === selectedGrade.toUpperCase();
 
+    // 4. Variety Filter
     const matchesVariety =
       !selectedVariety ||
       selectedVariety === 'ALL' ||
       (p.types && p.types.some((t) => t.type.toLowerCase().includes(selectedVariety.toLowerCase())));
 
+    // 5. Origin Location Filter
     let matchesLocation = true;
     if (selectedLocation) {
       const loc = selectedLocation.toLowerCase().trim();
       const origin = (p.origin || '').toLowerCase().trim();
       if (loc === 'all' || loc === '') {
         matchesLocation = true;
-      } else if (loc.includes('goa') && loc.includes('karnataka')) {
-        matchesLocation = origin.includes('goa') || origin.includes('karnataka') || origin.includes('coast');
       } else {
         matchesLocation = origin.includes(loc) || loc.includes(origin);
       }
     }
 
-    return matchesSearch && matchesGrade && matchesVariety && matchesLocation;
+    return matchesCategory && matchesSearch && matchesGrade && matchesVariety && matchesLocation;
   });
 
   return (
     <CartProvider>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col pb-16 lg:pb-0">
         <Header
           onNavigate={navigate}
           onOpenCart={() => setCartOpen(true)}
           onSearch={handleSearch}
+          onSelectCategory={handleSelectCategory}
           currentPage={page}
         />
 
         <main className="flex-1">
           {page === 'home' && (
             <>
-              <Hero onShopNow={() => navigate('products')} onLearnMore={() => navigate('grades')} />
+              <Hero
+                onShopNow={() => navigate('products')}
+                onExploreGiftBoxes={() => handleSelectCategory('gift-boxes')}
+                onSelectCategory={handleSelectCategory}
+                selectedCategory={selectedCategory}
+              />
+              <CategoryShowcase
+                onSelectCategory={handleSelectCategory}
+                onExploreAll={() => {
+                  setSelectedCategory(null);
+                  setSelectedLocation(null);
+                  setSelectedGrade(null);
+                  setSelectedVariety(null);
+                  navigate('products');
+                }}
+                selectedCategory={selectedCategory}
+              />
+              <ProductGrid
+                products={selectedCategory ? filteredProducts : products.filter((p) => p.active !== false)}
+                onView={viewProduct}
+                loading={productsLoading}
+                title={
+                  selectedCategory
+                    ? siteContent.categoryBanners?.find(
+                        (b) =>
+                          (b.categoryIds && b.categoryIds.join(',') === selectedCategory) ||
+                          b.categoryId === selectedCategory
+                      )?.title ||
+                      (selectedCategory === 'nuts'
+                        ? 'Premium Nuts Collection'
+                        : selectedCategory === 'dates-figs'
+                        ? 'Dates & Figs Collection'
+                        : selectedCategory === 'dried-fruits'
+                        ? 'Sun-Dried Fruits Collection'
+                        : selectedCategory === 'berries-seeds'
+                        ? 'Seeds & Trail Mixes Collection'
+                        : selectedCategory === 'gift-boxes'
+                        ? 'Gift Hampers & Keepsake Boxes'
+                        : `${CATEGORIES.find((c) => c.id === selectedCategory)?.name || 'Curated'} Selection`)
+                    : 'Best Sellers'
+                }
+                subtitle={
+                  selectedCategory
+                    ? undefined
+                    : 'Handpicked harvest of our most cherished almonds, king cashews, roasted pistachios, and royal Medjool dates.'
+                }
+                onViewAll={() => {
+                  setSelectedCategory(null);
+                  setSelectedLocation(null);
+                  setSelectedGrade(null);
+                  setSelectedVariety(null);
+                  navigate('products');
+                }}
+              />
               <Features />
               <GradeSelectorSection
                 products={products}
                 onSelectGrade={handleSelectGrade}
+                onSelectCategory={handleSelectCategory}
                 onExploreAll={() => {
+                  setSelectedCategory(null);
                   setSelectedLocation(null);
                   setSelectedGrade(null);
                   setSelectedVariety(null);
                   navigate('products');
                 }}
                 onSelectLocation={handleSelectLocation}
-              />
-              <ProductGrid
-                products={products.filter((p) => p.active !== false)}
-                onView={viewProduct}
-                loading={productsLoading}
-                title="Our Premium Cashew Collection"
-                subtitle={
-                  products.filter((p) => p.active !== false).length > 0
-                    ? `${availableGrades.length} artisanal grades • ${products.filter((p) => p.active !== false).length} distinct harvests & preparations across Goa & Karnataka.`
-                    : undefined
-                }
               />
               <StoreLocationSection />
               <Testimonials />
@@ -433,84 +540,93 @@ function App() {
           {page === 'products' && (
             <div className="pt-6 sm:pt-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               {/* Filter & Active Selection Bar */}
-              <div className="mb-6 card p-4 sm:p-5 bg-white border border-brand-200/80 shadow-xs space-y-3.5">
+              <div className="mb-6 card p-4 sm:p-5 bg-white border border-brand-200/80 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-brand-100">
                   <div>
                     <h1 className="font-serif text-xl sm:text-2xl font-bold text-brand-950">
-                      Explore All Cashew Harvests
+                      Explore All Dry Fruits & Nuts
                     </h1>
                     <p className="text-xs text-brand-600 mt-0.5">
-                      Filter by cashew grading caliber, cooking variety (raw, roasted, fried), or plantation origin.
+                      Select by dry fruit superfood category, origin (Kashmir, Goa, California, Saudi Arabia), or preparation style.
                     </p>
                   </div>
                   <div className="text-xs font-semibold text-brand-700 bg-cream-100 px-3 py-1.5 rounded-xl border border-brand-200 self-start sm:self-auto">
-                    {filteredProducts.length} {filteredProducts.length === 1 ? 'cashew harvest' : 'cashew harvests'} available
+                    {filteredProducts.length} {filteredProducts.length === 1 ? 'harvest' : 'harvests'} available
                   </div>
                 </div>
 
-                {/* Grade Filters */}
-                <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                  <span className="text-[11px] font-bold text-brand-500 uppercase tracking-wider min-w-[70px]">
-                    Grade:
-                  </span>
-                  <button
-                    onClick={() => setSelectedGrade(null)}
-                    className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
-                      !selectedGrade
-                        ? 'bg-brand-900 text-cream-50 font-bold shadow-xs'
-                        : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
-                    }`}
-                  >
-                    All Grades
-                  </button>
-                  {availableGrades.map((g) => (
+                {/* 1. Category Switcher */}
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-bold text-brand-500 uppercase tracking-wider">
+                    Superfood Category:
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
                     <button
-                      key={g}
-                      onClick={() => setSelectedGrade(selectedGrade === g ? null : g)}
-                      className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
-                        selectedGrade === g
-                          ? 'bg-brand-900 text-cream-50 font-bold shadow-xs'
+                      onClick={() => setSelectedCategory(null)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        !selectedCategory || selectedCategory === 'all'
+                          ? 'bg-brand-900 text-cream-50 shadow-xs'
                           : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
                       }`}
                     >
-                      {g}
+                      ✨ All Categories
                     </button>
-                  ))}
+                    {availableCategories.map((cat) => {
+                      const isSelected = selectedCategory === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-brand-900 text-cream-50 font-bold shadow-xs'
+                              : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
+                          }`}
+                        >
+                          <span>{cat.icon}</span>
+                          <span>{cat.name.split(' ')[0]}</span>
+                          {cat.hindiName && (
+                            <span className="text-[10px] opacity-75">({cat.hindiName})</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Variety Filters */}
-                {availableVarieties.length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap text-xs pt-2 border-t border-brand-100/60">
+                {/* 2. Caliber / Grade Filters (if applicable) */}
+                {availableGrades.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs pt-3 border-t border-brand-100/60">
                     <span className="text-[11px] font-bold text-brand-500 uppercase tracking-wider min-w-[70px]">
-                      Variety:
+                      Grade:
                     </span>
                     <button
-                      onClick={() => setSelectedVariety(null)}
-                      className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                        !selectedVariety
+                      onClick={() => setSelectedGrade(null)}
+                      className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
+                        !selectedGrade
                           ? 'bg-brand-900 text-cream-50 font-bold shadow-xs'
                           : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
                       }`}
                     >
-                      All Varieties
+                      All Grades
                     </button>
-                    {availableVarieties.map((v) => (
+                    {availableGrades.slice(0, 10).map((g) => (
                       <button
-                        key={v}
-                        onClick={() => setSelectedVariety(selectedVariety === v ? null : v)}
-                        className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                          selectedVariety === v
+                        key={g}
+                        onClick={() => setSelectedGrade(selectedGrade === g ? null : g)}
+                        className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
+                          selectedGrade === g
                             ? 'bg-brand-900 text-cream-50 font-bold shadow-xs'
                             : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
                         }`}
                       >
-                        {v}
+                        {g}
                       </button>
                     ))}
                   </div>
                 )}
 
-                {/* Origin Filters */}
+                {/* 3. Origin Filters */}
                 {availableOrigins.length > 0 && (
                   <div className="flex items-center gap-1.5 flex-wrap text-xs pt-2 border-t border-brand-100/60">
                     <span className="text-[11px] font-bold text-brand-500 uppercase tracking-wider min-w-[70px]">
@@ -542,13 +658,14 @@ function App() {
                   </div>
                 )}
 
-                {/* Active Filter Clear */}
-                {(selectedGrade || selectedVariety || selectedLocation || searchQuery) && (
+                {/* Active Filter Clear Bar */}
+                {(selectedCategory || selectedGrade || selectedVariety || selectedLocation || searchQuery) && (
                   <div className="pt-2 flex items-center justify-between text-xs text-brand-600 border-t border-brand-100">
                     <span>
                       Filtered by:{' '}
                       {[
-                        selectedGrade ? `Grade ${selectedGrade}` : null,
+                        selectedCategory ? `Category: ${selectedCategory}` : null,
+                        selectedGrade ? `Grade: ${selectedGrade}` : null,
                         selectedVariety ? `Variety: ${selectedVariety}` : null,
                         selectedLocation ? `Origin: ${selectedLocation}` : null,
                         searchQuery ? `Search: "${searchQuery}"` : null,
@@ -558,12 +675,13 @@ function App() {
                     </span>
                     <button
                       onClick={() => {
+                        setSelectedCategory(null);
                         setSelectedGrade(null);
                         setSelectedVariety(null);
                         setSelectedLocation(null);
                         setSearchQuery('');
                       }}
-                      className="text-red-600 hover:text-red-800 font-semibold underline"
+                      className="text-red-600 hover:text-red-800 font-semibold underline cursor-pointer"
                     >
                       Reset All Filters
                     </button>
@@ -595,7 +713,7 @@ function App() {
             <div className="max-w-md mx-auto py-24 px-4 text-center">
               <h3 className="font-serif text-xl font-bold text-brand-950">Product Not Found</h3>
               <p className="text-xs text-brand-500 mt-2 mb-6">
-                The requested cashew harvest is unavailable or catalog is currently empty.
+                The requested dry fruit harvest is unavailable or catalog is currently empty.
               </p>
               <button onClick={() => navigate('products')} className="btn-primary text-xs py-2 px-5">
                 Return to Storefront
@@ -678,6 +796,14 @@ function App() {
             setCartOpen(false);
             navigate('checkout');
           }}
+        />
+
+        {/* Mobile Fixed Bottom Navigation Bar */}
+        <MobileBottomNav
+          currentPage={page}
+          onNavigate={navigate}
+          onOpenCart={() => setCartOpen(true)}
+          onOpenCategories={() => navigate('grades')}
         />
       </div>
     </CartProvider>

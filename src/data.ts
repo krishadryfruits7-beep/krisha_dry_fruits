@@ -1,210 +1,1063 @@
-import type { Product, CashewGrade, StandardCashewGrade, CashewType, Quantity } from './types';
+import type { Product, ProductCategory, CategoryInfo, Quantity, VariantPrice } from './types';
 
-// Pexels image URLs (verified, real, on-topic)
-const IMG = {
-  rawBowl: 'https://images.pexels.com/photos/36631827/pexels-photo-36631827.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  rawBoard: 'https://images.pexels.com/photos/4499222/pexels-photo-4499222.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  rawGlass: 'https://images.pexels.com/photos/9017852/pexels-photo-9017852.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  rawOrange: 'https://images.pexels.com/photos/12326584/pexels-photo-12326584.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  rawPorcelain: 'https://images.pexels.com/photos/18876242/pexels-photo-18876242.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  rawBlack: 'https://images.pexels.com/photos/6803749/pexels-photo-6803749.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  rawClose: 'https://images.pexels.com/photos/5472144/pexels-photo-5472144.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  rawAssorted: 'https://images.pexels.com/photos/5202113/pexels-photo-5202113.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  roastedTray: 'https://images.pexels.com/photos/6730156/pexels-photo-6730156.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  roastedPaper: 'https://images.pexels.com/photos/19052912/pexels-photo-19052912.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  roastedClose: 'https://images.pexels.com/photos/18876240/pexels-photo-18876240.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  roastedSunlit: 'https://images.pexels.com/photos/32175377/pexels-photo-32175377.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  roastedMarket: 'https://images.pexels.com/photos/29060103/pexels-photo-29060103.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  roastedTexture: 'https://images.pexels.com/photos/4663476/pexels-photo-4663476.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  mixedNuts: 'https://images.pexels.com/photos/9615877/pexels-photo-9615877.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  mixedOrnate: 'https://images.pexels.com/photos/9615878/pexels-photo-9615878.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  handBowl: 'https://images.pexels.com/photos/13682249/pexels-photo-13682249.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  assortedNuts: 'https://images.pexels.com/photos/5425013/pexels-photo-5425013.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  marketDisplay: 'https://images.pexels.com/photos/33315987/pexels-photo-33315987.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  dryFruitsMarket: 'https://images.pexels.com/photos/11135641/pexels-photo-11135641.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-  nutsTray: 'https://images.pexels.com/photos/30308595/pexels-photo-30308595.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
+// High-resolution Cloudinary media URLs hosted on user's cloud (dqb3zf1bw)
+export const DRY_FRUITS_IMG = {
+  // Almonds
+  almondsRawBowl: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784692/krisha_dry_fruits/catalog/almonds_mamra.jpg',
+  almondsMacro: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784664/krisha_dry_fruits/products/prod_almonds.jpg',
+  almondsWood: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784664/krisha_dry_fruits/products/prod_almonds.jpg',
+  almondsRoasted: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784664/krisha_dry_fruits/products/prod_almonds.jpg',
+
+  // Cashews
+  cashewsBowl: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784666/krisha_dry_fruits/products/prod_cashews.jpg',
+  cashewsBoard: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784696/krisha_dry_fruits/catalog/cashews_w240.jpg',
+  cashewsRoasted: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784697/krisha_dry_fruits/catalog/cashews_w320.jpg',
+  cashewsClose: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784666/krisha_dry_fruits/products/prod_cashews.jpg',
+  cashewsSpiced: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784666/krisha_dry_fruits/products/prod_cashews.jpg',
+
+  // Walnuts
+  walnutsHalves: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784693/krisha_dry_fruits/catalog/walnuts_kashmiri.jpg',
+  walnutsBowl: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784694/krisha_dry_fruits/catalog/walnuts_chilean.jpg',
+  walnutsInShell: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784693/krisha_dry_fruits/catalog/walnuts_kashmiri.jpg',
+
+  // Pistachios
+  pistachiosBowl: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784667/krisha_dry_fruits/products/prod_pistachios.jpg',
+  pistachiosRoasted: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784667/krisha_dry_fruits/products/prod_pistachios.jpg',
+  pistachiosEmerald: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784698/krisha_dry_fruits/catalog/pistachios_emerald.jpg',
+
+  // Dates & Figs
+  datesMedjool: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784668/krisha_dry_fruits/products/prod_dates.jpg',
+  datesAjwa: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784668/krisha_dry_fruits/products/prod_dates.jpg',
+  figsAnjeer: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784699/krisha_dry_fruits/catalog/figs_afghan.jpg',
+
+  // Raisins & Berries
+  raisinsGreen: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784700/krisha_dry_fruits/catalog/raisins_green.jpg',
+  berriesAssorted: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784701/krisha_dry_fruits/catalog/seeds_7in1.jpg',
+  seedsTrailMix: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784701/krisha_dry_fruits/catalog/seeds_7in1.jpg',
+
+  // Luxury Hampers & Gift Boxes
+  giftBoxRoyal: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784702/krisha_dry_fruits/catalog/gift_imperial.jpg',
+  giftTrayAssorted: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793784702/krisha_dry_fruits/catalog/gift_imperial.jpg',
 };
+
+export const CATEGORIES: CategoryInfo[] = [
+  {
+    id: 'cashews',
+    name: 'Artisanal Cashews',
+    hindiName: 'काजू',
+    tagline: 'Coastal Goa & Karnataka Harvests',
+    description: 'Whole white kernels hand-sorted by caliber from W180 Jumbo King to W320 Classic, available raw, golden roasted, and spiced.',
+    icon: '🥜',
+    image: DRY_FRUITS_IMG.cashewsBowl,
+    badge: 'Flagship Collection',
+  },
+  {
+    id: 'almonds',
+    name: 'Premium Almonds',
+    hindiName: 'बादाम',
+    tagline: 'California Nonpareil & Kashmiri Mamra',
+    description: 'Nutrient-rich, oil-dense almonds carefully selected for maximum crunch, natural sweetness, and cognitive vitality.',
+    icon: '🌰',
+    image: DRY_FRUITS_IMG.almondsRawBowl,
+    badge: 'Superfood',
+  },
+  {
+    id: 'walnuts',
+    name: 'Snow White Walnuts',
+    hindiName: 'अखरोट',
+    tagline: 'Kashmiri Halves & Chilean Extra Light',
+    description: 'Hand-cracked premium akhrot giri with zero bitterness, packed with heart-healthy Omega-3 fatty acids.',
+    icon: '🧠',
+    image: DRY_FRUITS_IMG.walnutsHalves,
+    badge: 'Brain Booster',
+  },
+  {
+    id: 'pistachios',
+    name: 'Gourmet Pistachios',
+    hindiName: 'पिस्ता',
+    tagline: 'Naturally Opened Iranian & California Pista',
+    description: 'Jumbo smiling pistachio nuts, lightly dry-roasted with pink Himalayan salt and vibrant emerald unsalted kernels.',
+    icon: '🟢',
+    image: DRY_FRUITS_IMG.pistachiosBowl,
+    badge: 'Gourmet Snack',
+  },
+  {
+    id: 'dates',
+    name: 'Royal Dates',
+    hindiName: 'खजूर',
+    tagline: 'Saudi Medjool & Holy Madinah Ajwa',
+    description: 'Naturally sweet, caramel-rich, soft pulpy dates harvested directly from oasis palm groves.',
+    icon: '🌴',
+    image: DRY_FRUITS_IMG.datesMedjool,
+    badge: 'Zero Added Sugar',
+  },
+  {
+    id: 'figs',
+    name: 'Afghan Wild Figs',
+    hindiName: 'अंजीर',
+    tagline: 'Kandahar Jumbo & Turkish Pulpy Anjeer',
+    description: 'Traditional garland-strung wild figs, loaded with dietary fiber, iron, calcium, and delicate crunchy seeds.',
+    icon: '🍂',
+    image: DRY_FRUITS_IMG.figsAnjeer,
+    badge: 'High Fiber',
+  },
+  {
+    id: 'raisins',
+    name: 'Sundried Raisins',
+    hindiName: 'किशमिश',
+    tagline: 'Afghani Long Green & Black Munakka',
+    description: 'Sweet, juicy, sun-ripened raisins and medicinal black munakka for natural stamina and iron replenishment.',
+    icon: '🍇',
+    image: DRY_FRUITS_IMG.raisinsGreen,
+    badge: 'Digestive Health',
+  },
+  {
+    id: 'berries-seeds',
+    name: 'Berries & Super Seeds',
+    hindiName: 'बेरीज एवं बीज',
+    tagline: 'Cranberries, Blueberries, Chia & 7-in-1 Seeds',
+    description: 'Antioxidant-loaded dried wild berries paired with nutrient-dense roasted pumpkin, sunflower, and chia seeds.',
+    icon: '✨',
+    image: DRY_FRUITS_IMG.seedsTrailMix,
+    badge: 'Antioxidant Rich',
+  },
+  {
+    id: 'gift-boxes',
+    name: 'Festive Hampers',
+    hindiName: 'उपहार एवं हैंपर्स',
+    tagline: 'Imperial Velvet & Wooden Gift Boxes',
+    description: 'Elegantly curated dry fruit collections in handcrafted wooden and velvet keepsake chests for weddings and festivals.',
+    icon: '🎁',
+    image: DRY_FRUITS_IMG.giftTrayAssorted,
+    badge: 'Royal Gifting',
+  },
+];
+
+export const GRADES = [
+  { grade: 'W180', label: 'King of Cashews', description: 'The absolute largest cashew kernel. Only 180 nuts per pound. Unmatched creaminess and size.' },
+  { grade: 'W210', label: 'Royal Jumbo', description: 'Jumbo size kernels with 210 nuts per pound. Plump, rich, and visually majestic.' },
+  { grade: 'W240', label: 'Premium Standard', description: '240 nuts per pound. The premier choice for gifting, dry roasting, and festive sweets.' },
+  { grade: 'W320', label: 'Classic Table', description: 'The worldwide benchmark grade (320 nuts/lb). Crisp, buttery, and perfect for everyday vitality.' },
+  { grade: 'W450', label: 'Mini Whole', description: 'Petite bite-sized whole cashews (450 nuts/lb). Excellent for kheer, halwa, and curries.' },
+  { grade: 'Mamra Extra', label: 'Kashmiri Mamra', description: 'Original high-oil Kashmiri badam giri. Uneven concave shape, pure sweet almond oil.' },
+  { grade: 'California Jumbo', label: 'Nonpareil Extra', description: 'Uniform golden almonds with a paper-thin skin and smooth, sweet crunch.' },
+  { grade: 'Snow White Halves', label: 'Pahadi Akhrot Halves', description: 'Extra light Kashmiri walnut halves. Fresh, moist, and free of bitter tannin.' },
+  { grade: 'Akbari Jumbo', label: 'Iranian Pistachio', description: 'Naturally split long pistachios with deep crimson skin and jade green kernel.' },
+  { grade: 'Medjool Jumbo', label: 'King of Dates', description: 'Giant succulent dates with thick, amber caramel pulp and melt-in-mouth texture.' },
+];
 
 const QUANTITIES: Quantity[] = ['250g', '500g', '1kg', '2kg', '5kg'];
-
-// Base price per kg for each grade (higher grade number = larger nut = higher price)
-const GRADE_BASE_PRICE: Record<StandardCashewGrade, number> = {
-  W180: 1280,
-  W210: 1080,
-  W240: 880,
-  W320: 720,
-  W450: 580,
-};
-
-// Price multiplier per type
-const TYPE_MULTIPLIER: Record<CashewType, number> = {
-  'Raw': 1.0,
-  'Roasted': 1.15,
-  'Roasted & Salted': 1.18,
-  'Spiced': 1.22,
-  'Honey Glazed': 1.28,
-};
-
-// Weight in kg for each quantity option
-const WEIGHT_KG: Record<Quantity, number> = {
-  '250g': 0.25,
-  '500g': 0.5,
-  '1kg': 1.0,
-  '2kg': 2.0,
-  '5kg': 5.0,
-};
-
-// Bulk discount for larger quantities
-const BULK_DISCOUNT: Record<Quantity, number> = {
-  '250g': 1.0,
-  '500g': 0.97,
-  '1kg': 0.93,
-  '2kg': 0.88,
-  '5kg': 0.82,
-};
 
 function roundToTen(n: number): number {
   return Math.round(n / 10) * 10;
 }
 
-function buildPrices(grade: StandardCashewGrade, type: CashewType): { quantity: Quantity; price: number }[] {
-  const base = GRADE_BASE_PRICE[grade];
-  const mult = TYPE_MULTIPLIER[type];
+function makePriceTier(basePerKg: number, multiplier = 1.0): VariantPrice[] {
+  const weightMap: Record<string, number> = {
+    '250g': 0.25,
+    '500g': 0.5,
+    '1kg': 1.0,
+    '2kg': 2.0,
+    '5kg': 5.0,
+  };
+  const discountMap: Record<string, number> = {
+    '250g': 1.0,
+    '500g': 0.97,
+    '1kg': 0.93,
+    '2kg': 0.88,
+    '5kg': 0.82,
+  };
+
   return QUANTITIES.map((q) => {
-    const raw = base * mult * WEIGHT_KG[q] * BULK_DISCOUNT[q];
+    const raw = basePerKg * multiplier * weightMap[q] * discountMap[q];
     return { quantity: q, price: roundToTen(raw) };
   });
 }
 
-const TYPE_INFO: Record<CashewType, { description: string; image: string }> = {
-  'Raw': {
-    description: 'Unroasted, natural cashews straight from the shell. Creamy and mild — perfect for cooking, baking, or blending into your own recipes.',
-    image: IMG.rawBowl,
-  },
-  'Roasted': {
-    description: 'Slow-roasted to a golden crisp with no added oil or salt. Deep, nutty aroma with a satisfying crunch in every bite.',
-    image: IMG.roastedTray,
-  },
-  'Roasted & Salted': {
-    description: 'Golden-roasted cashews lightly dusted with sea salt. The classic snack — savoury, crunchy, and impossible to stop at one.',
-    image: IMG.roastedClose,
-  },
-  'Spiced': {
-    description: 'Roasted with a blend of black pepper, paprika, and roasted cumin. A bold, savoury kick inspired by Indian street flavours.',
-    image: IMG.roastedMarket,
-  },
-  'Honey Glazed': {
-    description: 'Coated in pure honey and lightly toasted for a glossy, golden finish. A delicate balance of sweet and nutty — our most indulgent variety.',
-    image: IMG.roastedTexture,
-  },
-};
-
-const GRADE_INFO: Record<StandardCashewGrade, { name: string; tagline: string; description: string; gradeDescription: string; badge: string; image: string; gallery: string[] }> = {
-  W180: {
-    name: 'Jumbo King W180',
-    tagline: 'The largest, most exclusive cashew grade',
-    description: 'Our flagship grade — only the biggest, most uniform cashews make the W180 cut. A true connoisseur\'s choice.',
-    gradeDescription: 'Approximately 180 cashews per pound. Extra-large, plump, and visually striking — the rarest grade we offer.',
-    badge: 'Premium',
-    image: IMG.rawBoard,
-    gallery: [IMG.rawBoard, IMG.rawClose, IMG.mixedOrnate, IMG.handBowl],
-  },
-  W210: {
-    name: 'Jumbo W210',
-    tagline: 'Large, impressive, and full of flavour',
-    description: 'Substantial nuts with a satisfying bite. Ideal for gifting or serving at gatherings where presentation matters.',
-    gradeDescription: 'Approximately 210 cashews per pound. Large, elegant, and consistently sized.',
-    badge: 'Choice',
-    image: IMG.rawGlass,
-    gallery: [IMG.rawGlass, IMG.rawPorcelain, IMG.rawAssorted, IMG.mixedNuts],
-  },
-  W240: {
-    name: 'Standard W240',
-    tagline: 'The everyday premium — balanced size and value',
-    description: 'Our most popular grade. Perfectly proportioned cashews that deliver on both taste and value.',
-    gradeDescription: 'Approximately 240 cashews per pound. The benchmark grade — great size, great price.',
+export const PRODUCTS: Product[] = [
+  // ── 1. CALIFORNIA ALMONDS (MOCKUP BESTSELLER #1) ───────────────────────────
+  {
+    id: 'kdf-almond-california',
+    category: 'almonds',
+    categoryLabel: 'Premium Almonds',
+    grade: 'California Jumbo',
+    name: 'California Nonpareil Extra Jumbo Almonds',
+    tagline: 'Imported Premium Caliber — Sweet Crunch & Golden Smooth Shell',
+    description: 'Imported directly from the orchards of the Central Valley in California. Hand-sorted for extra-large uniform size, paper-thin skin, and a sweet, crisp crunch.',
+    longDescription: 'Nonpareil is the gold standard of California almonds. Clean, uniform, and delicately sweet, they are perfect for daily breakfasts, smoothies, baking, or energizing work-desk snacking.',
+    origin: 'California, United States',
+    gradeDescription: 'Nonpareil Extra #1 grade, 20/22 caliber, double laser sorted.',
+    image: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789169/krisha_dry_fruits/products_hd/studio_almonds.jpg',
+    gallery: [
+      'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789169/krisha_dry_fruits/products_hd/studio_almonds.jpg',
+      DRY_FRUITS_IMG.almondsWood,
+      DRY_FRUITS_IMG.almondsMacro,
+      DRY_FRUITS_IMG.almondsRoasted,
+    ],
+    rating: 4.92,
+    reviewCount: 310,
     badge: 'Bestseller',
-    image: IMG.rawOrange,
-    gallery: [IMG.rawOrange, IMG.rawBlack, IMG.rawBowl, IMG.nutsTray],
+    healthBenefits: [
+      'High plant protein for lean muscle repair',
+      'Packed with dietary fiber to support gut microbiome',
+      'Rich in antioxidant flavonoids in the natural skin',
+    ],
+    nutritionalHighlights: {
+      calories: '579 kcal / 100g',
+      protein: '21.2g',
+      fiber: '11.8g',
+      healthyFats: '49.0g',
+      keyNutrient: 'Plant Protein & Calcium',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Crisp whole raw California almonds with uniform golden skin.',
+        image: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789169/krisha_dry_fruits/products_hd/studio_almonds.jpg',
+        prices: makePriceTier(840, 1.0),
+      },
+      {
+        type: 'Roasted & Salted',
+        description: 'Dry roasted with pure sea salt for a crunchy, savory satisfaction.',
+        image: DRY_FRUITS_IMG.almondsRoasted,
+        prices: makePriceTier(840, 1.15),
+      },
+      {
+        type: 'Smoked',
+        description: 'Hickory wood smoked savory almonds — an exceptional gourmet appetizer.',
+        image: DRY_FRUITS_IMG.almondsRoasted,
+        prices: makePriceTier(840, 1.25),
+      },
+      {
+        type: 'Honey Glazed',
+        description: 'Glazed with natural honey and dusted with Ceylon cinnamon.',
+        image: DRY_FRUITS_IMG.almondsMacro,
+        prices: makePriceTier(840, 1.25),
+      },
+    ],
   },
-  W320: {
-    name: 'Select W320',
-    tagline: 'Medium grade, big on flavour',
-    description: 'Slightly smaller but every bit as delicious. A versatile, everyday cashew for snacking and cooking alike.',
-    gradeDescription: 'Approximately 320 cashews per pound. Medium-sized, uniform, and excellent value.',
-    badge: 'Value',
-    image: IMG.rawPorcelain,
-    gallery: [IMG.rawPorcelain, IMG.rawBowl, IMG.rawClose, IMG.dryFruitsMarket],
+
+  // ── 2. W180 CASHEWS (MOCKUP BESTSELLER #2) ─────────────────────────────────
+  {
+    id: 'kdf-cashew-w180',
+    category: 'cashews',
+    categoryLabel: 'Artisanal Cashews',
+    grade: 'W180',
+    name: 'W180 Jumbo King Cashews',
+    tagline: 'King of Cashews — Largest Caliber Whole Coastal Harvest',
+    description: 'Our most prestigious cashew grade. Hand-sorted from sun-drenched coastal orchards along Goa and Karwar, boasting extraordinary size, buttery richness, and a pristine ivory color.',
+    longDescription: 'W180 represents the absolute pinnacle of cashew grading: only 180 whole kernel nuts make up one pound (453 grams). Every batch is shade-dried, hand-cracked, and strictly non-fumigated. Perfect for royal gifting, festive offerings, or as an indulgent everyday superfood.',
+    origin: 'Goa Coastal Belt, India',
+    gradeDescription: '170–180 whole kernels per pound. Maximum size, zero artificial polish.',
+    image: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789170/krisha_dry_fruits/products_hd/studio_cashews.jpg',
+    gallery: [
+      'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789170/krisha_dry_fruits/products_hd/studio_cashews.jpg',
+      DRY_FRUITS_IMG.cashewsBowl,
+      DRY_FRUITS_IMG.cashewsBoard,
+      DRY_FRUITS_IMG.cashewsRoasted,
+    ],
+    rating: 4.95,
+    reviewCount: 382,
+    badge: 'Premium Quality',
+    healthBenefits: [
+      'Heart-healthy monounsaturated fats',
+      'Rich in magnesium for bone density',
+      'Zero cholesterol and natural zinc source',
+      'Instant plant-based vitality',
+    ],
+    nutritionalHighlights: {
+      calories: '553 kcal / 100g',
+      protein: '18.2g',
+      fiber: '3.3g',
+      healthyFats: '43.8g',
+      keyNutrient: 'High Magnesium & Copper',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Pure, sweet, natural raw cashews straight from the shell. Mild and buttery.',
+        image: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789170/krisha_dry_fruits/products_hd/studio_cashews.jpg',
+        prices: makePriceTier(1380, 1.0),
+      },
+      {
+        type: 'Roasted & Salted',
+        description: 'Slow dry-roasted to a golden crisp and lightly dusted with crushed sea salt.',
+        image: DRY_FRUITS_IMG.cashewsRoasted,
+        prices: makePriceTier(1380, 1.15),
+      },
+      {
+        type: 'Pepper Spiced',
+        description: 'Tossed in Malabar black pepper, roasted cumin, and rock salt for a zesty kick.',
+        image: DRY_FRUITS_IMG.cashewsSpiced,
+        prices: makePriceTier(1380, 1.2),
+      },
+      {
+        type: 'Honey Glazed',
+        description: 'Coated in wild forest honey and toasted to crunchy golden perfection.',
+        image: DRY_FRUITS_IMG.cashewsClose,
+        prices: makePriceTier(1380, 1.25),
+      },
+    ],
   },
-  W450: {
-    name: 'Economy W450',
-    tagline: 'Compact nuts, incredible value',
-    description: 'Our most affordable grade. Smaller nuts that are perfect for cooking, baking, and bulk use.',
-    gradeDescription: 'Approximately 450 cashews per pound. Small, economical, and ideal for recipes.',
-    badge: 'Economy',
-    image: IMG.rawBlack,
-    gallery: [IMG.rawBlack, IMG.rawBowl, IMG.rawGlass, IMG.marketDisplay],
+
+  // ── 3. ROASTED PISTACHIOS (MOCKUP BESTSELLER #3) ───────────────────────────
+  {
+    id: 'kdf-pista-iranian',
+    category: 'pistachios',
+    categoryLabel: 'Gourmet Pistachios',
+    grade: 'Akbari Jumbo',
+    name: 'Iranian Jumbo Roasted & Salted Pistachios',
+    tagline: 'Naturally Opened Smiling Pistachios — Deep Nutty Saffron Crunch',
+    description: 'Long, elegant Akbari pistachios harvested in the desert oases of Iran. Naturally split on the tree under bright desert sun, roasted with pink salt to enhance their vibrant violet skin and emerald center.',
+    longDescription: 'Authentic tree-ripened pistachios open naturally, guaranteeing complete maturity and rich flavor. Zero mechanical cracking or chemical bleaching. Crack open the shell and experience authentic royal Persian pistachio flavor.',
+    origin: 'Rafsanjan, Iran',
+    gradeDescription: 'Akbari 20/22 naturally open shells, dry-roasted with pink salt.',
+    image: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789171/krisha_dry_fruits/products_hd/studio_pistachios.jpg',
+    gallery: [
+      'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789171/krisha_dry_fruits/products_hd/studio_pistachios.jpg',
+      DRY_FRUITS_IMG.pistachiosBowl,
+      DRY_FRUITS_IMG.pistachiosRoasted,
+    ],
+    rating: 4.93,
+    reviewCount: 345,
+    badge: 'Best Value',
+    healthBenefits: [
+      'High in lutein and zeaxanthin for eyesight protection',
+      'One of the lowest calorie, highest protein nuts',
+      'Contains bioavailable Vitamin B6 and thiamine',
+      'Supports gut microbiome via prebiotic fiber',
+    ],
+    nutritionalHighlights: {
+      calories: '562 kcal / 100g',
+      protein: '20.3g',
+      fiber: '10.6g',
+      healthyFats: '45.3g',
+      keyNutrient: 'Lutein & Vitamin B6',
+    },
+    types: [
+      {
+        type: 'Roasted & Salted',
+        description: 'Tree-opened jumbo pistachios roasted with Himalayan pink salt.',
+        image: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789171/krisha_dry_fruits/products_hd/studio_pistachios.jpg',
+        prices: makePriceTier(1390, 1.0),
+      },
+      {
+        type: 'Lightly Salted',
+        description: 'Mild low-sodium roast highlighting the natural sweetness of the nut.',
+        image: DRY_FRUITS_IMG.pistachiosRoasted,
+        prices: makePriceTier(1390, 1.0),
+      },
+      {
+        type: 'Pepper Spiced',
+        description: 'Tossed with black pepper and tangy amchur spices inside the shell.',
+        image: DRY_FRUITS_IMG.pistachiosRoasted,
+        prices: makePriceTier(1390, 1.08),
+      },
+    ],
   },
-};
 
-const ALL_TYPES: CashewType[] = ['Raw', 'Roasted', 'Roasted & Salted', 'Spiced', 'Honey Glazed'];
+  // ── 4. ROYAL MEDJOOL DATES (MOCKUP BESTSELLER #4) ──────────────────────────
+  {
+    id: 'kdf-date-medjool',
+    category: 'dates',
+    categoryLabel: 'Royal Dates',
+    grade: 'Medjool Jumbo',
+    name: 'Royal Saudi Medjool Jumbo Dates',
+    tagline: 'King of Dates — Melt-In-Mouth Pulpy Caramel Sweetness',
+    description: 'Extra-large succulent Medjool dates grown in sunny desert palm oases. Fleshy, soft, with natural hints of brown sugar, honey, and vanilla with zero added glucose.',
+    longDescription: 'Often called "Nature’s Caramel," Medjool dates are the largest and most prized variety of date palm. Plump and moist, they are an incredible natural pre-workout booster, healthy dessert substitute, and sacred festive treat.',
+    origin: 'Al-Qassim, Saudi Arabia',
+    gradeDescription: 'Jumbo Medjool, naturally moist, 0% added sugar or syrup.',
+    image: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789172/krisha_dry_fruits/products_hd/studio_dates.jpg',
+    gallery: [
+      'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789172/krisha_dry_fruits/products_hd/studio_dates.jpg',
+      DRY_FRUITS_IMG.datesMedjool,
+      DRY_FRUITS_IMG.datesAjwa,
+    ],
+    rating: 4.97,
+    reviewCount: 468,
+    badge: 'Fresh Stock',
+    healthBenefits: [
+      'Instant sustainable endurance & energy',
+      'High natural potassium (more than bananas)',
+      'Aids healthy digestion through soluble fiber',
+      'Pure guilt-free natural sweetener',
+    ],
+    nutritionalHighlights: {
+      calories: '277 kcal / 100g',
+      protein: '1.8g',
+      fiber: '6.7g',
+      healthyFats: '0.2g',
+      keyNutrient: 'Natural Minerals & Energy',
+    },
+    types: [
+      {
+        type: 'Natural Whole',
+        description: 'Plump whole royal Medjool dates with soft, velvety pulp.',
+        image: 'https://res.cloudinary.com/dqb3zf1bw/image/upload/v1793789172/krisha_dry_fruits/products_hd/studio_dates.jpg',
+        prices: makePriceTier(1450, 1.0),
+      },
+      {
+        type: 'Almond Stuffed',
+        description: 'Pitted royal Medjool dates stuffed with whole roasted California almonds.',
+        image: DRY_FRUITS_IMG.datesAjwa,
+        prices: makePriceTier(1450, 1.25),
+      },
+      {
+        type: 'Walnut Stuffed',
+        description: 'Pitted royal Medjool dates filled with buttery Kashmiri walnut halves.',
+        image: DRY_FRUITS_IMG.datesAjwa,
+        prices: makePriceTier(1450, 1.3),
+      },
+    ],
+  },
+  {
+    id: 'kdf-cashew-w240',
+    category: 'cashews',
+    categoryLabel: 'Artisanal Cashews',
+    grade: 'W240',
+    name: 'W240 Royal Large Cashews',
+    tagline: 'Large Premium Standard — Ideal Crunch & Balanced Sweetness',
+    description: 'A customer-favorite grade offering substantial kernel size, crisp bite, and creamy finish. Directly sourced from coastal Karnataka plantations.',
+    longDescription: 'With 220 to 240 kernels per pound, W240 delivers royal presentation at remarkable value. Excellent for snacking, dry fruit platters, and traditional Indian desserts like kaju katli.',
+    origin: 'Mangalore & Karwar, Karnataka',
+    gradeDescription: '220–240 kernels/lb. Crisp texture and rich nut butter aroma.',
+    image: DRY_FRUITS_IMG.cashewsBoard,
+    gallery: [DRY_FRUITS_IMG.cashewsBoard, DRY_FRUITS_IMG.cashewsRoasted, DRY_FRUITS_IMG.cashewsBowl],
+    rating: 4.88,
+    reviewCount: 247,
+    badge: 'Bestseller',
+    healthBenefits: ['High copper & iron content', 'Aids red blood cell formation', 'Natural antioxidant booster'],
+    nutritionalHighlights: {
+      calories: '550 kcal / 100g',
+      protein: '18.0g',
+      fiber: '3.3g',
+      healthyFats: '43.5g',
+      keyNutrient: 'Rich in Iron & Zinc',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Sun-dried raw whole cashews with sweet natural oil aroma.',
+        image: DRY_FRUITS_IMG.cashewsBoard,
+        prices: makePriceTier(980, 1.0),
+      },
+      {
+        type: 'Roasted & Salted',
+        description: 'Dry roasted with Himalayan rock salt. Delightful crunch in every bite.',
+        image: DRY_FRUITS_IMG.cashewsRoasted,
+        prices: makePriceTier(980, 1.15),
+      },
+    ],
+  },
+  {
+    id: 'kdf-cashew-w320',
+    category: 'cashews',
+    categoryLabel: 'Artisanal Cashews',
+    grade: 'W320',
+    name: 'W320 Classic Whole Cashews',
+    tagline: 'The World Benchmark Grade — Everyday Gourmet Crunch',
+    description: 'The most popular whole cashew grade across the globe. Perfectly balanced in size, sweetness, and crunch for daily snacking, curries, and sweets.',
+    longDescription: 'Counted at 300 to 320 nuts per pound, W320 cashews are freshly hand-graded and double vacuum-sealed for maximum shelf-freshness and zero moisture absorption.',
+    origin: 'Goa Coastal Belt, India',
+    gradeDescription: '300–320 kernels/lb. Freshly packed, zero broken pieces.',
+    image: DRY_FRUITS_IMG.cashewsRoasted,
+    gallery: [DRY_FRUITS_IMG.cashewsRoasted, DRY_FRUITS_IMG.cashewsBowl, DRY_FRUITS_IMG.cashewsClose],
+    rating: 4.85,
+    reviewCount: 198,
+    badge: 'Daily Favorite',
+    healthBenefits: ['Supports muscular recovery', 'Abundant dietary energy', 'Zero preservatives'],
+    nutritionalHighlights: {
+      calories: '553 kcal / 100g',
+      protein: '18.1g',
+      fiber: '3.2g',
+      healthyFats: '43.0g',
+      keyNutrient: 'Magnesium Powerhouse',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Sweet whole table cashews for versatile daily cooking and raw snacking.',
+        image: DRY_FRUITS_IMG.cashewsBowl,
+        prices: makePriceTier(820, 1.0),
+      },
+      {
+        type: 'Roasted & Salted',
+        description: 'Golden roasted with light sea salt dusting.',
+        image: DRY_FRUITS_IMG.cashewsRoasted,
+        prices: makePriceTier(820, 1.15),
+      },
+      {
+        type: 'Pepper Spiced',
+        description: 'Fiery freshly ground black pepper with roasted spices.',
+        image: DRY_FRUITS_IMG.cashewsSpiced,
+        prices: makePriceTier(820, 1.2),
+      },
+    ],
+  },
 
-export const PRODUCTS: Product[] = (Object.keys(GRADE_INFO) as StandardCashewGrade[]).map((grade) => {
-  const info = GRADE_INFO[grade];
-  return {
-    id: grade.toLowerCase().replace('w', 'grade-w'),
-    grade,
-    name: info.name,
-    tagline: info.tagline,
-    description: info.description,
-    longDescription: `${info.description} Sourced directly from certified farms along India\'s western coast, every batch is hand-sorted, quality-checked, and packed in our facility within 48 hours of processing to lock in freshness.`,
-    origin:
-      grade === 'W180' || grade === 'W240'
-        ? 'Goa Coastal Heritage Belt, India'
-        : grade === 'W210' || grade === 'W450'
-        ? 'Karnataka Malnad Foothills, India'
-        : 'Goa & Karnataka Coast, India',
-    gradeDescription: info.gradeDescription,
-    image: info.image,
-    gallery: info.gallery,
-    rating: grade === 'W180' ? 4.9 : grade === 'W210' ? 4.8 : grade === 'W240' ? 4.8 : grade === 'W320' ? 4.7 : 4.6,
-    reviewCount: grade === 'W240' ? 1247 : grade === 'W320' ? 892 : grade === 'W180' ? 384 : grade === 'W210' ? 567 : 631,
-    badge: info.badge,
-    types: ALL_TYPES.map((type) => ({
-      type,
-      description: TYPE_INFO[type].description,
-      image: TYPE_INFO[type].image,
-      prices: buildPrices(grade, type),
-    })),
-  };
-});
+  // ── 2. ALMONDS ─────────────────────────────────────────────────────────────
+  {
+    id: 'kdf-almond-mamra',
+    category: 'almonds',
+    categoryLabel: 'Premium Almonds',
+    grade: 'Mamra Extra',
+    name: 'Authentic Kashmiri Mamra Badam',
+    tagline: '100% Original Kashmiri Mountain Mamra — Oil-Rich Brain Superfood',
+    description: 'The undisputed royalty among almonds. Cultivated organically in the mountain valleys of Kashmir, Mamra badam contains up to 50% natural almond oil with unmatched memory and cognitive benefits.',
+    longDescription: 'Distinguished by its signature concave cavity and irregular shape, Kashmiri Mamra badam is 100% natural and never stripped of its natural oils (unlike commercial irradiated almonds). Each morning, soaked Mamra almonds are an age-old tradition for sharp memory, heart health, and radiant skin.',
+    origin: 'Kashmir Valley, India',
+    gradeDescription: 'Original Kashmiri Giri, 100% cold-press oil retained, 0% chemicals.',
+    image: DRY_FRUITS_IMG.almondsRawBowl,
+    gallery: [
+      DRY_FRUITS_IMG.almondsRawBowl,
+      DRY_FRUITS_IMG.almondsWood,
+      DRY_FRUITS_IMG.almondsMacro,
+      DRY_FRUITS_IMG.almondsRoasted,
+    ],
+    rating: 4.98,
+    reviewCount: 512,
+    badge: 'Kashmiri Heritage • 100% Oil-Rich',
+    healthBenefits: [
+      'Highest natural almond oil content (>45%)',
+      'Exceptional brain tonic & memory booster',
+      'Abundant in Vitamin E for skin and hair health',
+      'Lowers LDL bad cholesterol naturally',
+    ],
+    nutritionalHighlights: {
+      calories: '585 kcal / 100g',
+      protein: '21.4g',
+      fiber: '12.5g',
+      healthyFats: '49.9g',
+      keyNutrient: 'Highest Vitamin E & Natural Oils',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Raw mountain Mamra almonds. Ideal for soaking overnight in water or milk.',
+        image: DRY_FRUITS_IMG.almondsRawBowl,
+        prices: makePriceTier(2400, 1.0),
+      },
+      {
+        type: 'Roasted',
+        description: 'Slow-roasted Mamra badam with no added oil or salt. Deep, intoxicating nutty aroma.',
+        image: DRY_FRUITS_IMG.almondsRoasted,
+        prices: makePriceTier(2400, 1.1),
+      },
+    ],
+  },
+  {
+    id: 'kdf-almond-california',
+    category: 'almonds',
+    categoryLabel: 'Premium Almonds',
+    grade: 'California Jumbo',
+    name: 'California Nonpareil Extra Jumbo Almonds',
+    tagline: 'Imported Premium Caliber — Sweet Crunch & Golden Smooth Shell',
+    description: 'Imported directly from the orchards of the Central Valley in California. Hand-sorted for extra-large uniform size, paper-thin skin, and a sweet, crisp crunch.',
+    longDescription: 'Nonpareil is the gold standard of California almonds. Clean, uniform, and delicately sweet, they are perfect for daily breakfasts, smoothies, baking, or energizing work-desk snacking.',
+    origin: 'California, United States',
+    gradeDescription: 'Nonpareil Extra #1 grade, 20/22 caliber, double laser sorted.',
+    image: DRY_FRUITS_IMG.almondsWood,
+    gallery: [DRY_FRUITS_IMG.almondsWood, DRY_FRUITS_IMG.almondsMacro, DRY_FRUITS_IMG.almondsRoasted],
+    rating: 4.89,
+    reviewCount: 310,
+    badge: 'Extra Jumbo Caliber',
+    healthBenefits: [
+      'High plant protein for lean muscle repair',
+      'Packed with dietary fiber to support gut microbiome',
+      'Rich in antioxidant flavonoids in the natural skin',
+    ],
+    nutritionalHighlights: {
+      calories: '579 kcal / 100g',
+      protein: '21.2g',
+      fiber: '11.8g',
+      healthyFats: '49.0g',
+      keyNutrient: 'Plant Protein & Calcium',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Crisp whole raw California almonds with uniform golden skin.',
+        image: DRY_FRUITS_IMG.almondsWood,
+        prices: makePriceTier(840, 1.0),
+      },
+      {
+        type: 'Roasted & Salted',
+        description: 'Dry roasted with pure sea salt for a crunchy, savory satisfaction.',
+        image: DRY_FRUITS_IMG.almondsRoasted,
+        prices: makePriceTier(840, 1.15),
+      },
+      {
+        type: 'Smoked',
+        description: 'Hickory wood smoked savory almonds — an exceptional gourmet appetizer.',
+        image: DRY_FRUITS_IMG.almondsRoasted,
+        prices: makePriceTier(840, 1.25),
+      },
+      {
+        type: 'Honey Glazed',
+        description: 'Glazed with natural honey and dusted with Ceylon cinnamon.',
+        image: DRY_FRUITS_IMG.almondsMacro,
+        prices: makePriceTier(840, 1.25),
+      },
+    ],
+  },
 
-export const GRADES: { grade: CashewGrade; label: string; description: string }[] = [
-  { grade: 'W180', label: 'W180 — Jumbo King', description: '180 nuts/lb · Extra-large' },
-  { grade: 'W210', label: 'W210 — Jumbo', description: '210 nuts/lb · Large' },
-  { grade: 'W240', label: 'W240 — Standard', description: '240 nuts/lb · Medium-large' },
-  { grade: 'W320', label: 'W320 — Select', description: '320 nuts/lb · Medium' },
-  { grade: 'W450', label: 'W450 — Economy', description: '450 nuts/lb · Small' },
+  // ── 3. WALNUTS ─────────────────────────────────────────────────────────────
+  {
+    id: 'kdf-walnut-kashmiri',
+    category: 'walnuts',
+    categoryLabel: 'Snow White Walnuts',
+    grade: 'Snow White Halves',
+    name: 'Kashmiri Snow White Akhrot Giri',
+    tagline: 'Extra Light Halves — Pure Pahadi Akhrot with Zero Bitterness',
+    description: 'Finest hand-cracked walnut kernels from high-altitude Himalayan orchards in Kashmir. Pale ivory color, succulent crunch, and rich buttery sweetness without any harsh aftertaste.',
+    longDescription: 'Unlike commercial amber walnuts that taste dry and bitter, our Kashmiri Snow White halves are cracked from the newest seasonal harvest and immediately vacuum-sealed. Naturally overflowing with plant-based Omega-3 ALA to protect the heart and sharpen brain cognition.',
+    origin: 'Anantnag & Shopian, Kashmir, India',
+    gradeDescription: '100% Extra Light Halves, unbroken butterfly grade, vacuum-packed.',
+    image: DRY_FRUITS_IMG.walnutsHalves,
+    gallery: [DRY_FRUITS_IMG.walnutsHalves, DRY_FRUITS_IMG.walnutsBowl, DRY_FRUITS_IMG.walnutsInShell],
+    rating: 4.96,
+    reviewCount: 429,
+    badge: '100% Snow White Halves',
+    healthBenefits: [
+      'Richest dietary source of Omega-3 ALA fatty acids',
+      'Crucial for brain neurotransmitter health',
+      'Supports cardiovascular wellness & arterial elasticity',
+      'Natural source of sleep-regulating melatonin',
+    ],
+    nutritionalHighlights: {
+      calories: '654 kcal / 100g',
+      protein: '15.2g',
+      fiber: '6.7g',
+      healthyFats: '65.2g',
+      keyNutrient: 'Highest Plant Omega-3 (ALA)',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Extra light Snow White walnut halves. Sweet, crunchy, and freshly cracked.',
+        image: DRY_FRUITS_IMG.walnutsHalves,
+        prices: makePriceTier(1420, 1.0),
+      },
+      {
+        type: 'Roasted',
+        description: 'Gently warmed to release aromatic walnut oils and deepen flavor.',
+        image: DRY_FRUITS_IMG.walnutsBowl,
+        prices: makePriceTier(1420, 1.1),
+      },
+    ],
+  },
+  {
+    id: 'kdf-walnut-chilean',
+    category: 'walnuts',
+    categoryLabel: 'Snow White Walnuts',
+    grade: 'Chilean Extra Light',
+    name: 'Chilean Extra Light Walnut Kernels',
+    tagline: 'Imported Southern Harvest — Plump Buttery Halves',
+    description: 'Imported from Chile’s fertile valleys watered by Andean snowmelt. Renowned for their luminous light color, generous size, and mild taste.',
+    longDescription: 'Southern hemisphere seasons allow fresh harvest arrivals right when northern stocks are depleted. Ideal for breakfast bowls, keto diets, and walnut milk.',
+    origin: 'Central Valley, Chile',
+    gradeDescription: 'Chilean Extra Light 80%+ halves, certified fresh crop.',
+    image: DRY_FRUITS_IMG.walnutsBowl,
+    gallery: [DRY_FRUITS_IMG.walnutsBowl, DRY_FRUITS_IMG.walnutsHalves],
+    rating: 4.87,
+    reviewCount: 176,
+    badge: 'Fresh Andean Crop',
+    healthBenefits: ['Rich in polyphenols', 'Boosts heart resilience', 'High in natural copper'],
+    nutritionalHighlights: {
+      calories: '650 kcal / 100g',
+      protein: '15.0g',
+      fiber: '6.5g',
+      healthyFats: '65.0g',
+      keyNutrient: 'Omega-3 & Vitamin B6',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Light golden Chilean walnut halves with creamy, mild finish.',
+        image: DRY_FRUITS_IMG.walnutsBowl,
+        prices: makePriceTier(1240, 1.0),
+      },
+    ],
+  },
+
+  // ── 4. PISTACHIOS ──────────────────────────────────────────────────────────
+  {
+    id: 'kdf-pista-iranian',
+    category: 'pistachios',
+    categoryLabel: 'Gourmet Pistachios',
+    grade: 'Akbari Jumbo',
+    name: 'Iranian Jumbo Roasted & Salted Pistachios',
+    tagline: 'Naturally Opened Smiling Pistachios — Deep Nutty Saffron Crunch',
+    description: 'Long, elegant Akbari pistachios harvested in the desert oases of Iran. Naturally split on the tree under bright desert sun, roasted with pink salt to enhance their vibrant violet skin and emerald center.',
+    longDescription: 'Authentic tree-ripened pistachios open naturally, guaranteeing complete maturity and rich flavor. Zero mechanical cracking or chemical bleaching. Crack open the shell and experience authentic royal Persian pistachio flavor.',
+    origin: 'Rafsanjan, Iran',
+    gradeDescription: 'Akbari 20/22 naturally open shells, dry-roasted with pink salt.',
+    image: DRY_FRUITS_IMG.pistachiosBowl,
+    gallery: [DRY_FRUITS_IMG.pistachiosBowl, DRY_FRUITS_IMG.pistachiosRoasted, DRY_FRUITS_IMG.pistachiosEmerald],
+    rating: 4.93,
+    reviewCount: 345,
+    badge: 'Naturally Tree-Opened',
+    healthBenefits: [
+      'High in lutein and zeaxanthin for eyesight protection',
+      'One of the lowest calorie, highest protein nuts',
+      'Contains bioavailable Vitamin B6 and thiamine',
+      'Supports gut microbiome via prebiotic fiber',
+    ],
+    nutritionalHighlights: {
+      calories: '562 kcal / 100g',
+      protein: '20.3g',
+      fiber: '10.6g',
+      healthyFats: '45.3g',
+      keyNutrient: 'Lutein & Vitamin B6',
+    },
+    types: [
+      {
+        type: 'Roasted & Salted',
+        description: 'Tree-opened jumbo pistachios roasted with Himalayan pink salt.',
+        image: DRY_FRUITS_IMG.pistachiosBowl,
+        prices: makePriceTier(1390, 1.0),
+      },
+      {
+        type: 'Lightly Salted',
+        description: 'Mild low-sodium roast highlighting the natural sweetness of the nut.',
+        image: DRY_FRUITS_IMG.pistachiosRoasted,
+        prices: makePriceTier(1390, 1.0),
+      },
+      {
+        type: 'Pepper Spiced',
+        description: 'Tossed with black pepper and tangy amchur spices inside the shell.',
+        image: DRY_FRUITS_IMG.pistachiosRoasted,
+        prices: makePriceTier(1390, 1.08),
+      },
+    ],
+  },
+  {
+    id: 'kdf-pista-emerald',
+    category: 'pistachios',
+    categoryLabel: 'Gourmet Pistachios',
+    grade: 'Emerald Kernels',
+    name: 'California Emerald Raw Pistachio Kernels (Unsalted)',
+    tagline: '100% Shell-Free Jade Kernels — For Sweets, Baking & Gourmet Diets',
+    description: 'Pure, raw, shell-free green pistachio kernels. Vivid jade green color, sweet aroma, and zero added sodium. Ideal for barfi, kulfi, baklava, and pesto.',
+    longDescription: 'Eliminates shell waste completely: 100% pure edible kernels. Carefully sorted to discard discolored or broken nuts, delivering restaurant-grade purity right to your kitchen.',
+    origin: 'California, United States',
+    gradeDescription: '100% raw kernels, shell-free, vibrant emerald green caliber.',
+    image: DRY_FRUITS_IMG.pistachiosEmerald,
+    gallery: [DRY_FRUITS_IMG.pistachiosEmerald, DRY_FRUITS_IMG.pistachiosBowl],
+    rating: 4.91,
+    reviewCount: 167,
+    badge: '100% Shell Free',
+    healthBenefits: ['Zero sodium', 'High antioxidant score', 'Abundant potassium & protein'],
+    nutritionalHighlights: {
+      calories: '560 kcal / 100g',
+      protein: '20.6g',
+      fiber: '10.3g',
+      healthyFats: '45.0g',
+      keyNutrient: 'Pure Antioxidants & Potassium',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Pure emerald green unsalted pistachio kernels.',
+        image: DRY_FRUITS_IMG.pistachiosEmerald,
+        prices: makePriceTier(2100, 1.0),
+      },
+    ],
+  },
+
+  // ── 5. ROYAL DATES ─────────────────────────────────────────────────────────
+  {
+    id: 'kdf-date-medjool',
+    category: 'dates',
+    categoryLabel: 'Royal Dates',
+    grade: 'Medjool Jumbo',
+    name: 'Royal Saudi Medjool Jumbo Dates',
+    tagline: 'King of Dates — Melt-In-Mouth Pulpy Caramel Sweetness',
+    description: 'Extra-large succulent Medjool dates grown in sunny desert palm oases. Fleshy, soft, with natural hints of brown sugar, honey, and vanilla with zero added glucose.',
+    longDescription: 'Often called "Nature’s Caramel," Medjool dates are the largest and most prized variety of date palm. Plump and moist, they are an incredible natural pre-workout booster, healthy dessert substitute, and sacred festive treat.',
+    origin: 'Al-Qassim, Saudi Arabia',
+    gradeDescription: 'Jumbo Medjool, naturally moist, 0% added sugar or syrup.',
+    image: DRY_FRUITS_IMG.datesMedjool,
+    gallery: [DRY_FRUITS_IMG.datesMedjool, DRY_FRUITS_IMG.datesAjwa],
+    rating: 4.97,
+    reviewCount: 468,
+    badge: 'King of Dates • 100% Natural',
+    healthBenefits: [
+      'Instant sustainable endurance & energy',
+      'High natural potassium (more than bananas)',
+      'Aids healthy digestion through soluble fiber',
+      'Pure guilt-free natural sweetener',
+    ],
+    nutritionalHighlights: {
+      calories: '277 kcal / 100g',
+      protein: '1.8g',
+      fiber: '7.0g',
+      healthyFats: '0.2g',
+      keyNutrient: 'High Potassium & Natural Energy',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Whole plump Medjool dates with natural pit inside for freshest pulp preservation.',
+        image: DRY_FRUITS_IMG.datesMedjool,
+        prices: makePriceTier(1250, 1.0),
+      },
+    ],
+  },
+  {
+    id: 'kdf-date-ajwa',
+    category: 'dates',
+    categoryLabel: 'Royal Dates',
+    grade: 'Ajwa Al-Madinah',
+    name: 'Holy Madinah Ajwa Dates',
+    tagline: 'Revered Sacred Dates — Dark, Velvety, Healing Antioxidant Powerhouse',
+    description: 'Authentic Ajwa dates harvested exclusively from palm groves in the holy city of Al-Madinah Al-Munawwarah. Dark purple-black color, velvety texture, and rich Ayurvedic & therapeutic virtues.',
+    longDescription: 'Celebrated for centuries for their therapeutic and cardiovascular protective qualities, Ajwa dates are dense, slightly chewy, and packed with bioavailable iron, calcium, and phenolic antioxidants.',
+    origin: 'Al-Madinah, Saudi Arabia',
+    gradeDescription: 'Certified original Madinah harvest, Grade A dark round dates.',
+    image: DRY_FRUITS_IMG.datesAjwa,
+    gallery: [DRY_FRUITS_IMG.datesAjwa, DRY_FRUITS_IMG.datesMedjool],
+    rating: 4.99,
+    reviewCount: 620,
+    badge: 'Certified Madinah Harvest',
+    healthBenefits: [
+      'Cardioprotective flavonoids and polyphenols',
+      'Rich in iron to combat fatigue and anemia',
+      'Supports healthy pregnancy & maternal recovery',
+      'Potent anti-inflammatory properties',
+    ],
+    nutritionalHighlights: {
+      calories: '280 kcal / 100g',
+      protein: '2.4g',
+      fiber: '7.5g',
+      healthyFats: '0.3g',
+      keyNutrient: 'Bioactive Polyphenols & Iron',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Authentic whole Ajwa dates direct from Madinah palm orchards.',
+        image: DRY_FRUITS_IMG.datesAjwa,
+        prices: makePriceTier(1850, 1.0),
+      },
+    ],
+  },
+
+  // ── 6. AFGHAN FIGS (ANJEER) ────────────────────────────────────────────────
+  {
+    id: 'kdf-fig-afghani',
+    category: 'figs',
+    categoryLabel: 'Afghan Wild Figs',
+    grade: 'Kandahar Jumbo',
+    name: 'Afghani Kandahar Jumbo Wild Figs (Anjeer)',
+    tagline: 'Garland-Strung Pulpy Anjeer — Iron & Calcium Rich Digestive Superfood',
+    description: 'Large, golden-yellow dried figs cultivated in the dry alpine foothills of Kandahar, Afghanistan. Naturally dried on wild cotton strings, bursting with pulpy honeyed chewiness and crunchy mineral seeds.',
+    longDescription: 'Soaking 2 to 3 figs overnight in fresh water and consuming them with the infused water in the morning is a revered Indian tradition for regular bowel transit, robust bone density, and boosted hemoglobin.',
+    origin: 'Kandahar, Afghanistan',
+    gradeDescription: 'Jumbo size, natural string-threaded, unbleached, sugar-free.',
+    image: DRY_FRUITS_IMG.figsAnjeer,
+    gallery: [DRY_FRUITS_IMG.figsAnjeer, DRY_FRUITS_IMG.raisinsGreen],
+    rating: 4.94,
+    reviewCount: 388,
+    badge: 'Wild Kandahar Harvest',
+    healthBenefits: [
+      'Unmatched dietary fiber content for gentle digestion',
+      'High in bone-strengthening bio-calcium',
+      'Helps stabilize blood glucose levels',
+      'Powerful natural iron booster for hemoglobin',
+    ],
+    nutritionalHighlights: {
+      calories: '249 kcal / 100g',
+      protein: '3.3g',
+      fiber: '9.8g',
+      healthyFats: '0.9g',
+      keyNutrient: 'Highest Dietary Fiber & Calcium',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Sun-dried jumbo garland anjeer. Soft, chewy, with crunchy nutrient seeds.',
+        image: DRY_FRUITS_IMG.figsAnjeer,
+        prices: makePriceTier(1480, 1.0),
+      },
+    ],
+  },
+
+  // ── 7. RAISINS & BERRIES ───────────────────────────────────────────────────
+  {
+    id: 'kdf-raisin-afghan',
+    category: 'raisins',
+    categoryLabel: 'Sundried Raisins',
+    grade: 'Afghan Long Green',
+    name: 'Afghani Long Green Seedless Raisins (Kishmish)',
+    tagline: 'Slender Emerald Kishmish — Sun-Dried Naturally in Alpine Shade',
+    description: 'Long, slender, emerald-green seedless raisins from Afghanistan. Mild, floral honey sweetness and tender juicy texture, without sulphur fumes or chemical polish.',
+    longDescription: 'Sun-dried slowly in traditional earthen ventilated shade rooms (Kishmish Khana), preserving the grape’s natural verdant hue and high Vitamin C and antioxidant profile.',
+    origin: 'Herat, Afghanistan',
+    gradeDescription: 'Long green seedless caliber, unpolished, no artificial food color.',
+    image: DRY_FRUITS_IMG.raisinsGreen,
+    gallery: [DRY_FRUITS_IMG.raisinsGreen, DRY_FRUITS_IMG.berriesAssorted],
+    rating: 4.86,
+    reviewCount: 215,
+    badge: '100% Naturally Shade-Dried',
+    healthBenefits: ['Natural electrolyte source', 'Aids oral health with oleanolic acid', 'Natural stamina enhancer'],
+    nutritionalHighlights: {
+      calories: '299 kcal / 100g',
+      protein: '3.1g',
+      fiber: '3.7g',
+      healthyFats: '0.5g',
+      keyNutrient: 'High Iron & Natural Glucose',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Tender seedless long green raisins. Sweet and juicy.',
+        image: DRY_FRUITS_IMG.raisinsGreen,
+        prices: makePriceTier(560, 1.0),
+      },
+    ],
+  },
+  {
+    id: 'kdf-berry-cranberry',
+    category: 'berries-seeds',
+    categoryLabel: 'Berries & Super Seeds',
+    grade: 'Whole Cranberries',
+    name: 'Wild Canadian Whole Dried Cranberries',
+    tagline: 'Tart & Sweet Antioxidant Powerhouse — Infused with Apple Juice',
+    description: 'Juicy, ruby-red whole cranberries harvested from clean bog wetlands in Canada. Plump, delightfully tangy-sweet, and brimming with proanthocyanidins (PACs).',
+    longDescription: 'Naturally sweetened with pure apple juice concentrate rather than refined white table sugar. Wonderful additions to muesli, oatmeal, baked goods, or as a vibrant midday salad topper.',
+    origin: 'Quebec, Canada',
+    gradeDescription: 'Whole dried plump cranberries, no high-fructose corn syrup.',
+    image: DRY_FRUITS_IMG.berriesAssorted,
+    gallery: [DRY_FRUITS_IMG.berriesAssorted, DRY_FRUITS_IMG.seedsTrailMix],
+    rating: 4.90,
+    reviewCount: 184,
+    badge: 'Super Antioxidant',
+    healthBenefits: [
+      'Promotes urinary tract and kidney health (PACs)',
+      'High in Vitamin C and immune polyphenols',
+      'Natural anti-aging antioxidants',
+    ],
+    nutritionalHighlights: {
+      calories: '308 kcal / 100g',
+      protein: '0.5g',
+      fiber: '5.3g',
+      healthyFats: '1.4g',
+      keyNutrient: 'Proanthocyanidins & Vitamin C',
+    },
+    types: [
+      {
+        type: 'Raw',
+        description: 'Soft whole dried cranberries with delicious tart-sweet burst.',
+        image: DRY_FRUITS_IMG.berriesAssorted,
+        prices: makePriceTier(780, 1.0),
+      },
+    ],
+  },
+  {
+    id: 'kdf-seeds-superfood-mix',
+    category: 'berries-seeds',
+    categoryLabel: 'Berries & Super Seeds',
+    grade: '7-in-1 Power Mix',
+    name: '7-in-1 Roasted Superfood Seeds & Nut Trail Mix',
+    tagline: 'Pumpkin, Sunflower, Flax, Chia, Watermelon, Almonds & Cranberries',
+    description: 'A doctor-recommended daily energy powerhouse. Lightly roasted crunch with zero added oil, combining seven mighty seeds and dry fruits for complete daily vitality.',
+    longDescription: 'Contains high-zinc pumpkin seeds, magnesium-rich sunflower seeds, omega-3 flax seeds, chia seeds, watermelon kernels, California almond slivers, and whole dried cranberries.',
+    origin: 'Hand-blended in Bengaluru, India',
+    gradeDescription: 'Fresh slow-roasted batch, zero added artificial colors or preservatives.',
+    image: DRY_FRUITS_IMG.seedsTrailMix,
+    gallery: [DRY_FRUITS_IMG.seedsTrailMix, DRY_FRUITS_IMG.berriesAssorted],
+    rating: 4.93,
+    reviewCount: 290,
+    badge: 'Doctor Recommended',
+    healthBenefits: [
+      'Rich in plant protein & dietary fiber',
+      'High zinc content for immunity & hormone balance',
+      'Omega-3 and Omega-6 balanced ratio',
+    ],
+    nutritionalHighlights: {
+      calories: '510 kcal / 100g',
+      protein: '19.8g',
+      fiber: '14.2g',
+      healthyFats: '38.5g',
+      keyNutrient: 'Zinc, Selenium & Omega-3',
+    },
+    types: [
+      {
+        type: 'Roasted',
+        description: 'Lightly roasted crispy seed mix with Himalayan pink salt.',
+        image: DRY_FRUITS_IMG.seedsTrailMix,
+        prices: makePriceTier(680, 1.0),
+      },
+      {
+        type: 'Raw',
+        description: 'Unsalted raw seed blend for smoothies, yogurts, and keto salads.',
+        image: DRY_FRUITS_IMG.seedsTrailMix,
+        prices: makePriceTier(680, 1.0),
+      },
+    ],
+  },
+
+  // ── 8. LUXURY FESTIVE GIFT BOXES ───────────────────────────────────────────
+  {
+    id: 'kdf-gift-royal-heritage',
+    category: 'gift-boxes',
+    categoryLabel: 'Festive Hampers',
+    grade: 'Shahi 4-in-1',
+    name: 'Royal Heritage 4-Partition Dry Fruit Keepsake Box (1kg)',
+    tagline: 'Handcrafted Wooden Chest with Brass Lock — W180 Kaju, Mamra, Akhrot & Pista',
+    description: 'The pinnacle of bespoke corporate and family gifting. An exquisite solid wood box adorned with traditional brass inlays, housing four 250g airtight jars of our finest harvests.',
+    longDescription: 'Curated with our highest grades: (1) W180 Jumbo King Cashews (250g), (2) Authentic Kashmiri Mamra Badam (250g), (3) Kashmiri Snow White Akhrot Giri (250g), and (4) Iranian Jumbo Roasted Pistachios (250g). Includes an artisanal gift card and satin ribbon wrap.',
+    origin: 'Curated in Yeshwanthpur, Bengaluru',
+    gradeDescription: '1kg Net Dry Fruits in 4 independent glass jars inside a wooden keepsake chest.',
+    image: DRY_FRUITS_IMG.giftTrayAssorted,
+    gallery: [DRY_FRUITS_IMG.giftTrayAssorted, DRY_FRUITS_IMG.giftBoxRoyal],
+    rating: 5.0,
+    reviewCount: 142,
+    badge: 'Luxury Gift Hamper',
+    healthBenefits: ['Complete nutritional spectrum', 'Zero added artificial sugar', 'Perfect celebratory gift'],
+    nutritionalHighlights: {
+      calories: 'Varied premium nuts',
+      protein: 'High plant protein',
+      fiber: 'High dietary fiber',
+      healthyFats: 'Rich in Omega-3 & Vitamin E',
+      keyNutrient: 'All 4 Royal Dry Fruits in One Box',
+    },
+    types: [
+      {
+        type: 'Assorted 4-in-1',
+        description: 'Includes 250g each of W180 Cashews, Mamra Almonds, Snow White Walnuts & Iranian Pistachios.',
+        image: DRY_FRUITS_IMG.giftTrayAssorted,
+        prices: [
+          { quantity: '1kg', price: 2450 },
+          { quantity: '2kg', price: 4700 },
+          { quantity: '5kg', price: 11200 },
+        ],
+      },
+    ],
+  },
 ];
 
-export const ALL_TYPES_INFO = ALL_TYPES.map((t) => ({
-  type: t,
-  description: TYPE_INFO[t].description,
-}));
-
-export function formatPrice(n: number): string {
-  return '₹' + n.toLocaleString('en-IN');
+export function formatPrice(price: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(price);
 }
 
 export function generateOrderId(): string {
-  const prefix = 'KDF';
-  const num = Math.floor(100000 + Math.random() * 900000);
-  return `${prefix}${num}`;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `KDF-${code}`;
 }
 
 export function getEstimatedDelivery(): string {
-  const now = new Date();
-  const delivery = new Date(now);
-  delivery.setDate(now.getDate() + 4);
-  return delivery.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+  const d = new Date();
+  d.setDate(d.getDate() + 3);
+  return d.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' });
 }

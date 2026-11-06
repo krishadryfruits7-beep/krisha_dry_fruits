@@ -4,7 +4,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        serif: ['Fraunces', 'Georgia', 'serif'],
+        serif: ['"Playfair Display"', 'Fraunces', 'Georgia', 'serif'],
+        script: ['"Alex Brush"', 'cursive'],
         sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {

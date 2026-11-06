@@ -9,7 +9,7 @@ import './index.css';
 const CLERK_KEY =
   (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string) ||
   (import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY as string) ||
-  '';
+  'pk_test_YmlnLWxpemFyZC01NTMyLmNsZXJrLmFjY291bnRzLmRldiQ';
 
 function Root() {
   const [isAdmin, setIsAdmin] = useState(() =>

@@ -4,16 +4,19 @@ import { useStoredReviews, addStoredReview, syncWithServerReviews, type Customer
 import { api } from '@/api';
 import { useUser } from '@/auth';
 
-const CASHEW_GRADES = [
-  'W180 Jumbo King',
-  'W210 Premium Whole',
-  'W240 Superior Grade',
-  'W320 Standard Table',
-  'W450 Baby Kernels',
-  'Roasted & Salted Cashews',
-  'Honey Glazed Gourmet',
-  'Pepper Spiced Crunch',
-  'Fried & Salted Goan Special',
+const DRY_FRUIT_PRODUCTS = [
+  'Authentic Kashmiri Mamra Badam',
+  'California Nonpareil Extra Jumbo Almonds',
+  'W180 Jumbo King Cashews',
+  'W240 Royal Large Cashews',
+  'Kashmiri Snow White Akhrot Giri',
+  'Iranian Jumbo Roasted Pistachios',
+  'Royal Saudi Medjool Jumbo Dates',
+  'Holy Madinah Ajwa Dates',
+  'Afghani Kandahar Jumbo Wild Figs (Anjeer)',
+  'Afghani Long Green Seedless Raisins (Kishmish)',
+  '7-in-1 Roasted Superfood Seeds Mix',
+  'Royal Heritage 4-in-1 Keepsake Box',
 ];
 
 export default function Testimonials() {
@@ -25,7 +28,7 @@ export default function Testimonials() {
   const [hoverRating, setHoverRating] = useState(0);
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
-  const [gradeBought, setGradeBought] = useState(CASHEW_GRADES[0]);
+  const [gradeBought, setGradeBought] = useState(DRY_FRUIT_PRODUCTS[0]);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
@@ -274,17 +277,17 @@ export default function Testimonials() {
                   </div>
                 </div>
 
-                {/* Cashew Grade Bought */}
+                {/* Dry Fruit Product Bought */}
                 <div>
                   <label className="text-xs font-bold text-brand-900 block mb-1">
-                    Cashew Grade / Variety Enjoyed
+                    Dry Fruit Harvest / Variety Enjoyed
                   </label>
                   <select
                     value={gradeBought}
                     onChange={(e) => setGradeBought(e.target.value)}
                     className="input-field text-xs py-2.5 bg-white"
                   >
-                    {CASHEW_GRADES.map((g) => (
+                    {DRY_FRUIT_PRODUCTS.map((g) => (
                       <option key={g} value={g}>{g}</option>
                     ))}
                   </select>

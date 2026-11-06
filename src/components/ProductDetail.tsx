@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Star, ArrowLeft, Plus, Minus, Check, ShoppingBag, Truck, ShieldCheck, ChevronRight, ArrowRight, Lock, AlertCircle } from 'lucide-react';
+import { Star, ArrowLeft, Plus, Minus, Check, ShoppingBag, Truck, ShieldCheck, ChevronRight, ArrowRight, Lock, AlertCircle, Sparkles, Heart, Brain, Zap } from 'lucide-react';
 import type { Product, CashewType, Quantity } from '@/types';
 import { formatPrice } from '@/data';
 import { useCart } from '@/cart-context';
@@ -19,10 +19,14 @@ const TYPE_LABELS: Record<string, { emoji: string; short: string }> = {
   'Raw':              { emoji: '○', short: 'Raw Natural' },
   'Roasted':          { emoji: '●', short: 'Golden Roast' },
   'Roasted & Salted': { emoji: '◆', short: 'Salted Crisp' },
+  'Lightly Salted':   { emoji: '◇', short: 'Light Salt' },
+  'Smoked':           { emoji: '♨', short: 'Hickory Smoked' },
   'Fried & Salted':   { emoji: '⚡', short: 'Crispy Fried' },
   'Pepper Spiced':    { emoji: '▲', short: 'Spicy Masala' },
   'Spiced':           { emoji: '▲', short: 'Spicy Masala' },
   'Honey Glazed':     { emoji: '★', short: 'Honey Glazed' },
+  'Assorted 4-in-1':  { emoji: '🎁', short: '4-Jar Keepsake' },
+  'Assorted 6-in-1':  { emoji: '👑', short: '6-Jar Shahi' },
 };
 
 function getFirstAvailablePrice(type?: any) {
@@ -63,15 +67,16 @@ export default function ProductDetail({
     setAdded(false);
   }, [product.id, (product as any)._id]);
 
+  // Related sibling products (either same category or complementary)
   const siblingProducts = useMemo(() => {
     if (!allProducts || allProducts.length === 0) return [];
     const prodKey = product._id || product.id;
     return allProducts.filter(
       (p) =>
-        p.grade.toUpperCase() === product.grade.toUpperCase() &&
         (p._id || p.id) !== prodKey &&
-        p.active !== false
-    );
+        p.active !== false &&
+        (p.category === product.category || p.grade === product.grade)
+    ).slice(0, 4);
   }, [allProducts, product]);
 
   const currentType = useMemo(
@@ -79,7 +84,6 @@ export default function ProductDetail({
     [product, selectedType, firstType]
   );
 
-  // Filter only quantities with an active price > 0 (prices left as 0 or empty are not available)
   const availablePrices = useMemo(
     () => (currentType?.prices || []).filter((p) => typeof p.price === 'number' && p.price > 0),
     [currentType]
@@ -119,26 +123,6 @@ export default function ProductDetail({
     }
     setAdded(false);
   };
-
-  // Check if we just signed in with a pending item for this product
-  useEffect(() => {
-    if (!isSignedIn) return;
-    try {
-      if (typeof window === 'undefined' || !window.sessionStorage) return;
-      const raw = window.sessionStorage.getItem('kdf_pending_cart_item');
-      if (raw) {
-        const pending = JSON.parse(raw);
-        const prodKey = product._id || product.id;
-        const pendingKey = pending?.product?._id || pending?.product?.id;
-        if (prodKey && pendingKey && prodKey === pendingKey) {
-          if (pending.type) setSelectedType(pending.type);
-          if (pending.quantity) setSelectedQty(pending.quantity);
-          if (pending.count) setCount(pending.count);
-          setAdded(true);
-        }
-      }
-    } catch {}
-  }, [isSignedIn, product]);
 
   const handleGuestSignInAndAdd = () => {
     if (!currentPrice || currentPrice.price <= 0) return;
@@ -184,25 +168,25 @@ export default function ProductDetail({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-24 sm:pb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-28 sm:pb-14">
       {/* Top Breadcrumb Navigation */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2 text-xs sm:text-sm text-brand-600/90 font-medium">
           <button onClick={onBack} className="hover:text-brand-950 transition-colors">
-            Cashews
+            All Dry Fruits
           </button>
           <ChevronRight className="w-3.5 h-3.5 text-brand-300" />
-          <span className="text-brand-400 font-normal">{product.grade}</span>
+          <span className="text-brand-500 font-medium capitalize">{product.categoryLabel || product.category || 'Harvests'}</span>
           <ChevronRight className="w-3.5 h-3.5 text-brand-300" />
-          <span className="text-brand-950 font-semibold truncate max-w-[140px] sm:max-w-none">{product.name}</span>
+          <span className="text-brand-950 font-bold truncate max-w-[140px] sm:max-w-none">{product.name}</span>
         </div>
 
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-brand-700 hover:text-brand-950 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-700 hover:text-brand-950 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>All Grades</span>
+          <span>Back to Storefront</span>
         </button>
       </div>
 
@@ -220,14 +204,14 @@ export default function ProductDetail({
                 {product.badge}
               </span>
             </div>
-            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm border border-brand-100">
-              <span className="text-xs font-bold text-brand-900">{product.grade} Grade</span>
+            <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm border border-brand-100">
+              <span className="text-xs font-bold text-brand-900">{product.grade}</span>
             </div>
           </div>
 
           {/* Gallery Thumbnails */}
           {gallery.length > 1 && (
-            <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-4 gap-2.5 sm:gap-3 mb-6">
               {gallery.slice(0, 4).map((img, i) => (
                 <button
                   key={i}
@@ -241,22 +225,88 @@ export default function ProductDetail({
               ))}
             </div>
           )}
+
+          {/* Health & Nutritional Highlights Card */}
+          {product.nutritionalHighlights && (
+            <div className="card p-5 bg-cream-50/80 border border-brand-200/70 mb-6 space-y-3">
+              <div className="flex items-center justify-between border-b border-brand-200/50 pb-2.5">
+                <span className="font-serif text-sm font-bold text-brand-950 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-gold-500" />
+                  <span>Nutritional & Superfood Profile</span>
+                </span>
+                {product.nutritionalHighlights.keyNutrient && (
+                  <span className="text-[11px] font-bold text-forest-800 bg-forest-50 px-2.5 py-0.5 rounded-full border border-forest-200">
+                    {product.nutritionalHighlights.keyNutrient}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+                {product.nutritionalHighlights.calories && (
+                  <div className="p-2.5 rounded-xl bg-white border border-brand-100 shadow-2xs">
+                    <span className="text-[10px] uppercase font-bold text-brand-400 block">Energy</span>
+                    <span className="text-xs font-bold text-brand-950">{product.nutritionalHighlights.calories}</span>
+                  </div>
+                )}
+                {product.nutritionalHighlights.protein && (
+                  <div className="p-2.5 rounded-xl bg-white border border-brand-100 shadow-2xs">
+                    <span className="text-[10px] uppercase font-bold text-brand-400 block">Protein</span>
+                    <span className="text-xs font-bold text-brand-950">{product.nutritionalHighlights.protein}</span>
+                  </div>
+                )}
+                {product.nutritionalHighlights.fiber && (
+                  <div className="p-2.5 rounded-xl bg-white border border-brand-100 shadow-2xs">
+                    <span className="text-[10px] uppercase font-bold text-brand-400 block">Dietary Fiber</span>
+                    <span className="text-xs font-bold text-brand-950">{product.nutritionalHighlights.fiber}</span>
+                  </div>
+                )}
+                {product.nutritionalHighlights.healthyFats && (
+                  <div className="p-2.5 rounded-xl bg-white border border-brand-100 shadow-2xs">
+                    <span className="text-[10px] uppercase font-bold text-brand-400 block">Healthy Fats</span>
+                    <span className="text-xs font-bold text-brand-950">{product.nutritionalHighlights.healthyFats}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Health Benefits Bullet Points */}
+              {product.healthBenefits && product.healthBenefits.length > 0 && (
+                <div className="pt-2 border-t border-brand-200/50">
+                  <div className="text-[11px] font-bold text-brand-800 uppercase tracking-wider mb-1.5">
+                    Health Benefits:
+                  </div>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-brand-700">
+                    {product.healthBenefits.map((b, idx) => (
+                      <li key={idx} className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-forest-600 shrink-0" />
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Column: Specifications & Configuration */}
         <div className="flex flex-col">
           {/* Header & Ratings */}
           <div className="mb-4">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full bg-brand-100 text-xs font-bold text-brand-800 tracking-wider">
-                {product.grade} Standard
+                {product.grade}
               </span>
+              {product.categoryLabel && (
+                <span className="px-2.5 py-0.5 rounded-full bg-cream-200 text-xs font-semibold text-brand-700">
+                  {product.categoryLabel}
+                </span>
+              )}
               {product.rating > 0 && (
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-800">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-800 ml-auto sm:ml-0">
                   <Star className="w-3.5 h-3.5 text-gold-500 fill-current" />
                   <span>{product.rating}</span>
                   {product.reviewCount > 0 && (
-                    <span className="text-brand-500 font-normal">({product.reviewCount} customer reviews)</span>
+                    <span className="text-brand-500 font-normal">({product.reviewCount} reviews)</span>
                   )}
                 </div>
               )}
@@ -279,12 +329,12 @@ export default function ProductDetail({
               {product.longDescription || product.description}
             </p>
 
-            {/* Other Variations & Harvests for Same Grade */}
+            {/* Other Variations in same category */}
             {siblingProducts.length > 0 && (
               <div className="mt-4 p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/90 shadow-xs">
                 <div className="text-xs font-bold text-amber-950 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                  <span>🌾 Other Styles & Harvests for Grade {product.grade}:</span>
-                  <span className="text-[10px] font-normal text-amber-700 font-sans">({siblingProducts.length} more available)</span>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Explore Other Harvests in {product.categoryLabel || 'Collection'}:</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {siblingProducts.map((sp) => {
@@ -302,7 +352,7 @@ export default function ProductDetail({
                         <img src={sp.image} alt={sp.name} className="w-10 h-10 rounded-lg object-cover ring-1 ring-amber-100 shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-bold text-brand-950 group-hover:text-brand-700 truncate">{sp.name}</div>
-                          <div className="text-[10.5px] text-forest-700 font-medium truncate">📍 {sp.origin ? sp.origin.split(',')[0].trim() : 'Coastal'}</div>
+                          <div className="text-[10.5px] text-forest-700 font-medium truncate">📍 {sp.origin ? sp.origin.split(',')[0].trim() : 'Orchard'}</div>
                           {spMin && <div className="text-[11px] font-semibold text-brand-900">from {formatPrice(spMin)}</div>}
                         </div>
                         <ArrowRight className="w-3.5 h-3.5 text-amber-600 group-hover:translate-x-0.5 transition-transform shrink-0" />
@@ -314,12 +364,12 @@ export default function ProductDetail({
             )}
           </div>
 
-          {/* Variety Selector */}
+          {/* Variety / Preparation Selector */}
           {product.types.length > 1 && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2.5">
                 <label className="text-xs sm:text-sm font-bold text-brand-950 tracking-wide uppercase">
-                  1. Choose Variety
+                  1. Choose Style / Variety
                 </label>
                 <span className="text-xs text-brand-500 font-medium">Selected: <strong className="text-brand-900">{selectedType}</strong></span>
               </div>
@@ -372,29 +422,29 @@ export default function ProductDetail({
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2.5">
               <label className="text-xs sm:text-sm font-bold text-brand-950 tracking-wide uppercase">
-                2. Select Pack Weight
+                {product.category === 'gift-boxes' ? '2. Select Pack Option' : '2. Select Pack Weight'}
               </label>
               {availablePrices.length > 0 && (
-                <span className="text-xs text-forest-700 font-semibold">Bulk discount applied</span>
+                <span className="text-xs text-forest-700 font-semibold">Bulk tier savings applied</span>
               )}
             </div>
 
             {availablePrices.length > 0 ? (
-              <div className="flex flex-wrap gap-2 sm:gap-2.5">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {availablePrices.map((p) => {
                   const isSelected = selectedQty === p.quantity;
                   return (
                     <button
                       key={p.quantity}
-                      onClick={() => { setSelectedQty(p.quantity as Quantity); setAdded(false); }}
-                      className={`flex-1 min-w-[70px] sm:min-w-[85px] py-2 sm:py-2.5 px-3 rounded-xl border text-center transition-all ${
+                      onClick={() => { setSelectedQty(p.quantity); setAdded(false); }}
+                      className={`p-3 rounded-2xl border text-center transition-all ${
                         isSelected
-                          ? 'border-brand-800 bg-brand-800 text-cream-50 font-bold shadow-sm'
-                          : 'border-brand-200 bg-white text-brand-900 hover:border-brand-400 font-medium'
+                          ? 'border-brand-700 bg-brand-900 text-cream-50 shadow-md ring-2 ring-brand-700/20'
+                          : 'border-brand-200 bg-white hover:border-brand-400 text-brand-900'
                       }`}
                     >
-                      <div className="text-xs sm:text-sm">{p.quantity}</div>
-                      <div className={`text-[10.5px] ${isSelected ? 'text-cream-200' : 'text-brand-600 font-semibold'}`}>
+                      <div className="text-xs sm:text-sm font-bold font-mono">{p.quantity}</div>
+                      <div className={`text-[11px] mt-0.5 font-bold ${isSelected ? 'text-amber-300' : 'text-brand-600'}`}>
                         {formatPrice(p.price)}
                       </div>
                     </button>
@@ -404,7 +454,7 @@ export default function ProductDetail({
             ) : (
               <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>This variety has no available package weights at the moment. Please select another variety above.</span>
+                <span>This variety has no available package weights at the moment. Please select another option above.</span>
               </div>
             )}
           </div>
@@ -423,7 +473,7 @@ export default function ProductDetail({
                 </div>
                 {currentPrice && currentPrice.price > 0 && (
                   <div className="text-[11px] text-forest-700 font-medium mt-0.5">
-                    ✓ Free delivery on orders over ₹2,000
+                    ✓ Free delivery on orders over ₹1,200
                   </div>
                 )}
               </div>
@@ -475,7 +525,7 @@ export default function ProductDetail({
                   <span>Sign In to Add to Cart • {currentPrice ? formatPrice(currentPrice.price * count) : ''}</span>
                 </button>
                 <p className="text-[11.5px] text-brand-600 text-center font-medium">
-                  🔒 Please sign in with Google to add products to your cart.
+                  🔒 Sign in with Google to add products to your cart and track orders.
                 </p>
               </div>
             ) : !added ? (
@@ -518,8 +568,8 @@ export default function ProductDetail({
                 <Truck className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-brand-950">Express Delivery</div>
-                <div className="text-[10px] text-brand-500">Dispatched in 48 hours</div>
+                <div className="text-xs font-bold text-brand-950">Express Dispatch</div>
+                <div className="text-[10px] text-brand-500">Shipped within 48h</div>
               </div>
             </div>
 
@@ -528,24 +578,20 @@ export default function ProductDetail({
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-brand-950">
-                  {siteContent.contact?.showFssai !== false && Boolean(siteContent.contact?.fssaiNumber?.trim())
-                    ? 'FSSAI Certified'
-                    : 'Quality Assured'}
-                </div>
-                <div className="text-[10px] text-brand-500">100% Quality Guarantee</div>
+                <div className="text-xs font-bold text-brand-950">100% Quality Sealed</div>
+                <div className="text-[10px] text-brand-500">Airtight nitrogen fresh pack</div>
               </div>
             </div>
           </div>
 
-          {/* Origin & Specs */}
+          {/* Sourcing & Specs Table */}
           <div className="border-t border-brand-200/60 pt-4 space-y-2 text-xs">
             <div className="flex justify-between py-1 border-b border-brand-100/60">
               <span className="text-brand-500 font-medium">Harvest Origin</span>
               <span className="font-semibold text-brand-950">{product.origin}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-brand-100/60">
-              <span className="text-brand-500 font-medium">Nut Count Standard</span>
+              <span className="text-brand-500 font-medium">Quality & Caliber Standard</span>
               <span className="font-semibold text-brand-950">{product.gradeDescription}</span>
             </div>
             <div className="flex justify-between py-1">

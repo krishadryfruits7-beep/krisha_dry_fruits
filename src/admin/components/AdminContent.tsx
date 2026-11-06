@@ -51,14 +51,18 @@ import {
   type HeroSlide,
   type FeatureItem,
   type DeliverySettings,
+  type CategoryBannerItem,
   DEFAULT_SITE_CONTENT,
   DEFAULT_DELIVERY_SETTINGS,
+  DEFAULT_CATEGORY_BANNERS,
   calculateDeliveryFee,
   getStoreGoogleMapsUrl,
   getStoreEmbedMapUrl,
   extractCoordinatesFromMapsUrl,
 } from '@/site-content';
 import ImageUploadWidget from './ImageUploadWidget';
+import CategoryMultiSelect from './CategoryMultiSelect';
+import { getAllCategories } from '@/categories-storage';
 
 const ICON_OPTIONS: Array<{ label: string; value: FeatureItem['iconName']; icon: any }> = [
   { label: 'Leaf (Natural/Organic)', value: 'Leaf', icon: Leaf },
@@ -70,7 +74,7 @@ const ICON_OPTIONS: Array<{ label: string; value: FeatureItem['iconName']; icon:
   { label: 'Check (Certified)', value: 'Check', icon: Check },
 ];
 
-export type ContentTab = 'hero' | 'features' | 'locations' | 'contact' | 'delivery' | 'social';
+export type ContentTab = 'hero' | 'categories' | 'features' | 'locations' | 'contact' | 'delivery' | 'social';
 
 interface AdminContentProps {
   initialTab?: ContentTab;
@@ -85,7 +89,7 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
       const searchParams = new URLSearchParams(window.location.search);
       const tabParam = searchParams.get('tab') as ContentTab;
       const subtabParam = searchParams.get('subtab') as ContentTab;
-      const valid: ContentTab[] = ['hero', 'features', 'locations', 'contact', 'delivery', 'social'];
+      const valid: ContentTab[] = ['hero', 'categories', 'features', 'locations', 'contact', 'delivery', 'social'];
       if (tabParam && valid.includes(tabParam)) return tabParam;
       if (subtabParam && valid.includes(subtabParam)) return subtabParam;
     }
@@ -759,6 +763,60 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
     showToast('Location banner removed.', 'info');
   };
 
+  const updateCategoryCard = (index: number, patch: Partial<CategoryBannerItem>) => {
+    setContent((prev) => {
+      const list = [...(prev.categoryBanners || DEFAULT_CATEGORY_BANNERS)];
+      list[index] = { ...list[index], ...patch };
+      return { ...prev, categoryBanners: list };
+    });
+  };
+
+  const addCategoryCard = () => {
+    setContent((prev) => {
+      const list = [...(prev.categoryBanners || DEFAULT_CATEGORY_BANNERS)];
+      const newCard: CategoryBannerItem = {
+        id: `showcase-${Date.now()}`,
+        categoryId: 'nuts',
+        title: 'New Showcase Category',
+        subtitle: 'Collection subtitle',
+        image: 'https://images.pexels.com/photos/12326584/pexels-photo-12326584.jpeg?auto=compress&cs=tinysrgb&h=600&w=1000',
+      };
+      return { ...prev, categoryBanners: [...list, newCard] };
+    });
+    showToast('New showcase category card added! Configure details below and click Save.', 'success');
+  };
+
+  const removeCategoryCard = (index: number) => {
+    setContent((prev) => {
+      const list = (prev.categoryBanners || DEFAULT_CATEGORY_BANNERS).filter((_, i) => i !== index);
+      return { ...prev, categoryBanners: list };
+    });
+    showToast('Showcase card removed.', 'info');
+  };
+
+  const moveCategoryCardUp = (index: number) => {
+    if (index <= 0) return;
+    setContent((prev) => {
+      const list = [...(prev.categoryBanners || DEFAULT_CATEGORY_BANNERS)];
+      const temp = list[index];
+      list[index] = list[index - 1];
+      list[index - 1] = temp;
+      return { ...prev, categoryBanners: list };
+    });
+  };
+
+  const moveCategoryCardDown = (index: number) => {
+    const list = content.categoryBanners || DEFAULT_CATEGORY_BANNERS;
+    if (index >= list.length - 1) return;
+    setContent((prev) => {
+      const copy = [...(prev.categoryBanners || DEFAULT_CATEGORY_BANNERS)];
+      const temp = copy[index];
+      copy[index] = copy[index + 1];
+      copy[index + 1] = temp;
+      return { ...prev, categoryBanners: copy };
+    });
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       {/* Top Banner & Control Bar */}
@@ -816,9 +874,10 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 border-b border-brand-200/80">
         {[
           { id: 'hero', label: 'Announcement & Hero', icon: Sparkles },
-          { id: 'features', label: '4 Trust Features', icon: Layers },
+          { id: 'categories', label: 'Front Showcase Cards', icon: Layers },
+          { id: 'features', label: '4 Trust Features', icon: Award },
           { id: 'locations', label: 'Location Cashew Banners', icon: MapPin },
-          { id: 'contact', label: 'Store Location & Contact', icon: MapPin },
+          { id: 'contact', label: 'Store Location & Contact', icon: Store },
           { id: 'delivery', label: 'Delivery & KM Pricing', icon: Truck },
           { id: 'social', label: 'Footer & Social Handles', icon: Share2 },
         ].map((tab) => {
@@ -846,6 +905,63 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-8 shadow-luxury border border-brand-200/60 space-y-6">
             
+            {/* Store Brand Logo & Header Icon Card */}
+            <div className="p-5 rounded-2xl bg-white border border-brand-200 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-brand-100 gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-lg bg-brand-100 text-brand-800">
+                      <ImageIcon className="w-4 h-4" />
+                    </span>
+                    <h3 className="font-serif text-base font-bold text-brand-950">
+                      Store Brand Logo & Icon
+                    </h3>
+                  </div>
+                  <p className="text-xs text-brand-600 mt-0.5">
+                    Your official brand logo shown in the customer header, footer, customer invoices, and admin navigation.
+                  </p>
+                </div>
+                {content.logo && content.logo !== '/Krisha_Dry_Fruits_logo.png' && (
+                  <button
+                    type="button"
+                    onClick={() => setContent((prev) => ({ ...prev, logo: '/Krisha_Dry_Fruits_logo.png' }))}
+                    className="text-xs text-brand-600 hover:text-brand-950 underline font-medium"
+                  >
+                    Reset to Default Logo
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-2xl bg-cream-50/70 border border-brand-200">
+                {/* Visual Preview */}
+                <div className="flex flex-col items-center gap-1.5 shrink-0">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-white ring-2 ring-brand-400/80 shadow-md flex items-center justify-center p-1">
+                    <img
+                      src={content.logo || '/Krisha_Dry_Fruits_logo.png'}
+                      alt="Brand Logo"
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  </div>
+                  <span className="text-[10px] font-semibold text-brand-600 uppercase tracking-wider">
+                    Live Preview
+                  </span>
+                </div>
+
+                {/* Upload & URL Control */}
+                <div className="flex-1 space-y-2 w-full">
+                  <ImageUploadWidget
+                    label="Upload Store Logo (PNG / JPG / WebP)"
+                    value={content.logo || '/Krisha_Dry_Fruits_logo.png'}
+                    onChange={(url) => setContent((prev) => ({ ...prev, logo: url }))}
+                    folder="krisha_dry_fruits/brand"
+                  />
+                  <p className="text-[11px] text-brand-500">
+                    * Recommended: Square format (e.g. 500×500px), with transparent or clean white/cream background.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Dedicated Top Announcement Bar Card */}
             <div className="p-5 rounded-2xl bg-brand-950 text-cream-100 border border-brand-800 space-y-3 shadow-md">
               <div className="flex items-center justify-between">
@@ -1105,7 +1221,195 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
         </div>
       )}
 
-      {/* TAB 2: 4 TRUST FEATURES */}
+      {/* TAB 2: FRONT SHOWCASE CATEGORY CARDS */}
+      {activeTab === 'categories' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-luxury border border-brand-200/60 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-brand-100 gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-brand-100 text-brand-800">
+                  <Layers className="w-4 h-4" />
+                </span>
+                <h2 className="font-serif text-xl font-bold text-brand-950">
+                  Front Showcase Cards
+                </h2>
+              </div>
+              <p className="text-xs text-brand-600 mt-1 max-w-2xl">
+                These are the visual category banner cards placed directly beneath the hero banner on the homepage. Customers tap these cards to instantly filter the store by your chosen collections.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={addCategoryCard}
+                className="btn-outline py-2 px-3.5 text-xs font-semibold flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Showcase Card</span>
+              </button>
+              {renderSaveButton('Save Cards', 'btn-primary py-2 px-4 text-xs font-semibold')}
+            </div>
+          </div>
+
+          {/* Cards Grid / List */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {(content.categoryBanners || DEFAULT_CATEGORY_BANNERS).map((card, idx) => (
+              <div
+                key={card.id || idx}
+                className="rounded-2xl border border-brand-200/80 bg-cream-50/50 p-5 space-y-4 hover:shadow-md transition-all relative group"
+              >
+                {/* Header & Order Buttons */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-brand-900 text-cream-50 text-xs font-bold flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <span className="text-xs font-bold text-brand-900 truncate max-w-[180px]">
+                      {card.title || 'Untitled Card'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveCategoryCardUp(idx)}
+                      disabled={idx === 0}
+                      className="p-1 rounded text-brand-600 hover:bg-cream-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                      title="Move card left / up"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveCategoryCardDown(idx)}
+                      disabled={idx === (content.categoryBanners || DEFAULT_CATEGORY_BANNERS).length - 1}
+                      className="p-1 rounded text-brand-600 hover:bg-cream-200 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                      title="Move card right / down"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeCategoryCard(idx)}
+                      className="p-1 rounded text-red-500 hover:bg-red-50 transition-colors ml-1"
+                      title="Delete this showcase card"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Live Card Preview Box */}
+                <div className="relative rounded-xl overflow-hidden aspect-[2.35/1] bg-cream-200 border border-brand-200 shadow-inner">
+                  {card.image ? (
+                    <img
+                      src={card.image}
+                      alt={card.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-brand-400">
+                      No Image Set
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-3 text-white">
+                    <p className="font-serif text-sm font-bold leading-tight">{card.title}</p>
+                    <p className="text-[10px] text-cream-200 truncate">{card.subtitle}</p>
+                  </div>
+                </div>
+
+                {/* Edit Fields */}
+                <div className="space-y-3 pt-1">
+                  <div>
+                    <label className="text-xs font-bold text-brand-900 block mb-1">
+                      Card Heading / Title
+                    </label>
+                    <input
+                      value={card.title}
+                      onChange={(e) => updateCategoryCard(idx, { title: e.target.value })}
+                      className="input-field text-xs py-2 bg-white"
+                      placeholder="e.g. Premium Nuts, Dates & Figs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-brand-900 block mb-1">
+                      Subtitle / Nut Details
+                    </label>
+                    <input
+                      value={card.subtitle}
+                      onChange={(e) => updateCategoryCard(idx, { subtitle: e.target.value })}
+                      className="input-field text-xs py-2 bg-white"
+                      placeholder="e.g. Almonds, Cashews & Walnuts"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-brand-900 block mb-1.5">
+                      Included Categories (Select single or multiple)
+                    </label>
+                    <CategoryMultiSelect
+                      selectedIds={(() => {
+                        const cats = Array.isArray(card.categoryIds) && card.categoryIds.length > 0
+                          ? card.categoryIds
+                          : card.categoryId === 'nuts'
+                          ? ['almonds', 'cashews', 'walnuts', 'pistachios']
+                          : card.categoryId === 'dates-figs'
+                          ? ['dates', 'figs']
+                          : card.categoryId === 'dried-fruits'
+                          ? ['raisins', 'figs']
+                          : card.categoryId === 'berries-seeds'
+                          ? ['berries-seeds']
+                          : card.categoryId === 'gift-boxes'
+                          ? ['gift-boxes']
+                          : [card.categoryId];
+                        return cats.filter(Boolean);
+                      })()}
+                      onChange={(nextIds) => {
+                        updateCategoryCard(idx, {
+                          categoryIds: nextIds,
+                          categoryId: nextIds[0] || card.categoryId,
+                        });
+                      }}
+                      allCategories={getAllCategories()}
+                    />
+                    <p className="text-[10px] text-brand-500 mt-1">
+                      * When customers tap this card on the home page, products from all chosen categories will be displayed.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-brand-900 block mb-1">
+                      Banner Image (Cloudinary or Direct URL)
+                    </label>
+                    <ImageUploadWidget
+                      label="Upload Showcase Banner Photo"
+                      value={card.image}
+                      onChange={(url) => updateCategoryCard(idx, { image: url })}
+                      folder="krisha_dry_fruits/showcase"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-4 border-t border-brand-100 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={addCategoryCard}
+              className="btn-outline py-2 px-4 text-xs font-semibold flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Another Showcase Card</span>
+            </button>
+            {renderSaveButton('Save Showcase Cards', 'btn-primary py-2.5 px-6 text-xs font-semibold')}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: 4 TRUST FEATURES */}
       {activeTab === 'features' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-luxury border border-brand-200/60 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-brand-100 gap-2">

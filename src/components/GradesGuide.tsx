@@ -1,5 +1,6 @@
-import { Check, ArrowRight } from 'lucide-react';
-import { GRADES, formatPrice } from '@/data';
+import { useState } from 'react';
+import { Check, ArrowRight, Sparkles, BookOpen, Brain, Heart, Leaf, ShieldCheck } from 'lucide-react';
+import { GRADES, CATEGORIES, formatPrice } from '@/data';
 import type { Product } from '@/types';
 
 interface GradesGuideProps {
@@ -8,127 +9,289 @@ interface GradesGuideProps {
   products?: Product[];
 }
 
-function SkeletonRow() {
-  return (
-    <div className="card p-6 flex flex-col md:flex-row gap-6 items-center animate-pulse">
-      <div className="flex items-center gap-4 md:w-48 shrink-0">
-        <div className="w-14 h-14 rounded-2xl bg-cream-200" />
-        <div className="space-y-2">
-          <div className="h-4 w-12 bg-cream-200 rounded" />
-          <div className="h-3 w-20 bg-cream-200 rounded" />
-        </div>
-      </div>
-      <div className="flex-1 space-y-2">
-        <div className="h-5 w-40 bg-cream-200 rounded" />
-        <div className="h-3 w-full bg-cream-200 rounded" />
-        <div className="h-3 w-3/4 bg-cream-200 rounded" />
-      </div>
-      <div className="shrink-0 space-y-2 text-right">
-        <div className="h-3 w-10 bg-cream-200 rounded ml-auto" />
-        <div className="h-7 w-20 bg-cream-200 rounded ml-auto" />
-      </div>
-    </div>
+export default function GradesGuide({ onShop, onViewProduct, products = [] }: GradesGuideProps) {
+  const [activeTab, setActiveTab] = useState<'cashews' | 'almonds' | 'walnuts' | 'dates' | 'figs'>('cashews');
+
+  const filteredProducts = products.filter(
+    (p) => (p.category === activeTab || p.name.toLowerCase().includes(activeTab.slice(0, 4))) && p.active !== false
   );
-}
-
-export default function GradesGuide({ onShop, onViewProduct, products }: GradesGuideProps) {
-  const loading = !products;
-  const empty = products?.length === 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center mb-12">
-        <h1 className="font-serif text-3xl lg:text-4xl font-bold text-brand-950 mb-3">Understanding Cashew Grades</h1>
-        <p className="text-brand-600 max-w-xl mx-auto">
-          The "W" number tells you how many cashews make up one pound — a smaller number means larger, more premium nuts.
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+      {/* Page Header */}
+      <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-100 border border-brand-200 text-brand-900 text-[11px] font-bold uppercase tracking-wider mb-3">
+          <BookOpen className="w-3.5 h-3.5 text-brand-600" />
+          <span>The Connoisseur's Handbook</span>
+        </div>
+        <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-brand-950 tracking-tight mb-3">
+          Sourcing, Caliber & Grading Standards
+        </h1>
+        <p className="text-xs sm:text-sm text-brand-700/90 leading-relaxed max-w-2xl mx-auto">
+          Every dry fruit in our Yeshwanthpur shop follows rigid origin standards. Understand what makes Kashmiri Mamra distinct from California almonds, how cashew W-counts work, and why high-altitude walnut halves are sweeter.
         </p>
       </div>
 
-      <div className="space-y-4">
-        {loading ? (
-          [...Array(5)].map((_, i) => <SkeletonRow key={i} />)
-        ) : empty ? (
-          <div className="card p-12 text-center border border-dashed border-brand-300 bg-cream-50/50">
-            <p className="font-serif text-xl font-bold text-brand-950 mb-2">Catalog Currently Clean</p>
-            <p className="text-sm text-brand-600 mb-6 max-w-md mx-auto">
-              There are no cashew grades or products listed in the catalog yet. Once products are created in the admin panel, they will appear here with full caliber details.
-            </p>
-            <button onClick={onShop} className="btn-primary">
-              Explore Storefront
-            </button>
+      {/* Guide Category Switcher Tabs */}
+      <div className="flex items-center justify-center gap-2 mb-10 overflow-x-auto no-scrollbar pb-1">
+        {[
+          { id: 'cashews', label: 'Cashews (Kaju)', icon: '🥜' },
+          { id: 'almonds', label: 'Almonds (Badam)', icon: '🌰' },
+          { id: 'walnuts', label: 'Walnuts (Akhrot)', icon: '🧠' },
+          { id: 'dates', label: 'Royal Dates (Khajoor)', icon: '🌴' },
+          { id: 'figs', label: 'Afghan Figs (Anjeer)', icon: '🍂' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-2 cursor-pointer ${
+              activeTab === tab.id
+                ? 'bg-brand-900 text-cream-50 shadow-md ring-2 ring-brand-700/30'
+                : 'bg-white hover:bg-cream-100 text-brand-800 border border-brand-200/70 shadow-2xs'
+            }`}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Deep-Dive Educational Cards for Selected Tab */}
+      <div className="mb-12">
+        {activeTab === 'cashews' && (
+          <div className="card p-6 sm:p-8 bg-white border border-brand-200/80 shadow-luxury space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-brand-100">
+              <div>
+                <span className="text-xs uppercase font-bold text-brand-500 tracking-wider">The Caliber Rule</span>
+                <h2 className="font-serif text-2xl font-bold text-brand-950 mt-0.5">
+                  How Cashew Nut Grading (W180 to W450) Works
+                </h2>
+              </div>
+              <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-950 max-w-sm">
+                Rule of Thumb: <strong className="text-amber-900">Smaller number = Larger, heavier, more luxurious nut.</strong>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-cream-50 border border-brand-200/60">
+                <div className="font-serif text-xl font-bold text-brand-900">W180 — King Grade</div>
+                <div className="text-[11px] font-bold text-forest-700 mt-0.5">170–180 nuts/lb</div>
+                <p className="text-xs text-brand-600 mt-2 leading-relaxed">
+                  The largest cashew kernel harvested. Extra thick, exceptionally creamy, prized for VIP gifting.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-cream-50 border border-brand-200/60">
+                <div className="font-serif text-xl font-bold text-brand-900">W210 — Royal Jumbo</div>
+                <div className="text-[11px] font-bold text-forest-700 mt-0.5">200–210 nuts/lb</div>
+                <p className="text-xs text-brand-600 mt-2 leading-relaxed">
+                  Jumbo caliber with beautiful crescent curvature and dense crunch.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-cream-50 border border-brand-200/60">
+                <div className="font-serif text-xl font-bold text-brand-900">W240 — Premium Large</div>
+                <div className="text-[11px] font-bold text-forest-700 mt-0.5">220–240 nuts/lb</div>
+                <p className="text-xs text-brand-600 mt-2 leading-relaxed">
+                  The premier choice for festive dry fruit platters, roasted snacks, and rich kaju sweets.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-cream-50 border border-brand-200/60">
+                <div className="font-serif text-xl font-bold text-brand-900">W320 — Benchmark Classic</div>
+                <div className="text-[11px] font-bold text-forest-700 mt-0.5">300–320 nuts/lb</div>
+                <p className="text-xs text-brand-600 mt-2 leading-relaxed">
+                  The global standard for taste and daily vitality. Balanced sweetness and delightful crispness.
+                </p>
+              </div>
+            </div>
           </div>
-        ) : (
-          products.map((product, i) => {
-            const gradeInfo = GRADES.find((g) => g.grade.toUpperCase() === product.grade.toUpperCase());
-            const gradeDesc = product.gradeDescription || gradeInfo?.description || product.tagline || 'Hand-sorted whole kernels';
+        )}
+
+        {activeTab === 'almonds' && (
+          <div className="card p-6 sm:p-8 bg-white border border-brand-200/80 shadow-luxury space-y-6">
+            <div className="pb-6 border-b border-brand-100">
+              <span className="text-xs uppercase font-bold text-brand-500 tracking-wider">Heritage Comparison</span>
+              <h2 className="font-serif text-2xl font-bold text-brand-950 mt-0.5">
+                Kashmiri Mamra Badam vs. California Nonpareil Almonds
+              </h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-5 rounded-2xl bg-cream-50 border-2 border-brand-300">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-serif text-lg font-bold text-brand-950">Authentic Kashmiri Mamra</h3>
+                  <span className="text-[10px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full">
+                    👑 Royalty of Almonds
+                  </span>
+                </div>
+                <ul className="space-y-2 text-xs text-brand-700">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-forest-600 mt-0.5 shrink-0" />
+                    <span><strong>Natural Oil Content:</strong> Over 45% to 50% natural almond oil.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-forest-600 mt-0.5 shrink-0" />
+                    <span><strong>Distinct Look:</strong> Small, concave center with irregular wild contours.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-forest-600 mt-0.5 shrink-0" />
+                    <span><strong>Ayurvedic Virtue:</strong> Unequaled brain tonic, memory booster, and skin glow.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-cream-50 border border-brand-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-serif text-lg font-bold text-brand-950">California Nonpareil Extra</h3>
+                  <span className="text-[10px] font-bold text-forest-900 bg-forest-100 px-2 py-0.5 rounded-full">
+                    Crunch Favorite
+                  </span>
+                </div>
+                <ul className="space-y-2 text-xs text-brand-700">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-forest-600 mt-0.5 shrink-0" />
+                    <span><strong>Crunch & Flavor:</strong> Sweet, crisp, smooth paper-thin skin.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-forest-600 mt-0.5 shrink-0" />
+                    <span><strong>Uniformity:</strong> Large, clean, light-colored kernels perfect for snacks.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-3.5 h-3.5 text-forest-600 mt-0.5 shrink-0" />
+                    <span><strong>Daily Fitness:</strong> High plant-protein (21g/100g) for active workout lifestyles.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'walnuts' && (
+          <div className="card p-6 sm:p-8 bg-white border border-brand-200/80 shadow-luxury space-y-4">
+            <span className="text-xs uppercase font-bold text-brand-500 tracking-wider">Himalayan Purity</span>
+            <h2 className="font-serif text-2xl font-bold text-brand-950">
+              Kashmiri Snow White Halves vs Commercial Amber Akhrot
+            </h2>
+            <p className="text-xs sm:text-sm text-brand-700 leading-relaxed">
+              Commercial store-bought walnuts often taste dark, bitter, and oily due to prolonged storage and oxidation. At Krisha Dry Fruits, our <strong>Kashmiri Snow White Akhrot Giri</strong> is freshly hand-cracked in high-altitude valleys, ensuring pale ivory color, crisp bite, and zero bitter tannin. Packed with pure plant-based <strong>Omega-3 ALA</strong> for arterial elasticity and brain vitality.
+            </p>
+          </div>
+        )}
+
+        {activeTab === 'dates' && (
+          <div className="card p-6 sm:p-8 bg-white border border-brand-200/80 shadow-luxury space-y-4">
+            <span className="text-xs uppercase font-bold text-brand-500 tracking-wider">Desert Elixirs</span>
+            <h2 className="font-serif text-2xl font-bold text-brand-950">
+              Royal Medjool Jumbo vs. Holy Al-Madinah Ajwa Dates
+            </h2>
+            <div className="grid md:grid-cols-2 gap-4 text-xs text-brand-700 pt-2">
+              <div className="p-4 rounded-xl bg-cream-50 border border-brand-200">
+                <span className="font-serif font-bold text-base text-brand-950 block mb-1">Medjool King</span>
+                <span>Giant, succulent caramel-soft dates. Natural substitute for refined sugar in desserts, coffee, and workout fuel.</span>
+              </div>
+              <div className="p-4 rounded-xl bg-cream-50 border border-brand-200">
+                <span className="font-serif font-bold text-base text-brand-950 block mb-1">Madinah Ajwa</span>
+                <span>Dark, velvety sacred dates renowned for cardioprotective polyphenols, iron enrichment, and anti-inflammatory properties.</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'figs' && (
+          <div className="card p-6 sm:p-8 bg-white border border-brand-200/80 shadow-luxury space-y-4">
+            <span className="text-xs uppercase font-bold text-brand-500 tracking-wider">Wild Alpine Harvest</span>
+            <h2 className="font-serif text-2xl font-bold text-brand-950">
+              Afghani Kandahar Garland Anjeer
+            </h2>
+            <p className="text-xs sm:text-sm text-brand-700 leading-relaxed">
+              Threaded on organic wild cotton strings, these jumbo sun-dried figs from Kandahar retain high concentrations of dietary fiber (9.8g/100g), bioavailable calcium, and iron. Soaking 2–3 figs overnight in fresh water remains the premier natural Ayurvedic regimen for optimal digestive rhythm and bone strength.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Matching In-Stock Products in this category */}
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-serif text-xl sm:text-2xl font-bold text-brand-950">
+            Available Harvests in {activeTab.toUpperCase()}
+          </h3>
+          <button
+            onClick={onShop}
+            className="text-xs font-bold text-brand-700 hover:text-brand-950 flex items-center gap-1"
+          >
+            <span>View Full Catalog</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {filteredProducts.map((product, i) => {
             const allPrices = (product.types || [])
               .flatMap((t) => (t.prices || []).map((p) => p.price))
               .filter((p): p is number => typeof p === 'number' && p > 0);
             const minPrice = allPrices.length ? Math.min(...allPrices) : null;
+
             return (
               <div
-                key={(product as any)._id || product.id || product.grade}
-                className="card p-6 hover:shadow-md transition-all flex flex-col md:flex-row gap-6 items-center"
+                key={product.id || (product as any)._id}
+                className="card p-5 sm:p-6 hover:shadow-luxury-lg transition-all flex flex-col md:flex-row gap-5 items-center border border-brand-200/80"
               >
-                <div className="flex items-center gap-4 md:w-48 shrink-0">
-                  <div className="w-14 h-14 rounded-2xl bg-brand-100 flex items-center justify-center font-serif text-lg font-bold text-brand-700">
-                    {i + 1}
+                <div className="flex items-center gap-4 md:w-56 shrink-0">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden bg-cream-200/60 shrink-0 border border-brand-200">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-serif text-xl font-bold text-brand-900">{product.grade}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-serif text-base font-bold text-brand-950">{product.grade}</span>
                       {product.origin && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-cream-100 text-brand-700 border border-brand-200">
-                          📍 {product.origin}
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-forest-50 text-forest-800 border border-forest-200">
+                          📍 {product.origin.split(',')[0]}
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-brand-500 line-clamp-1">{gradeDesc}</div>
+                    <div className="text-[11.5px] text-brand-600 line-clamp-1 mt-0.5">{product.gradeDescription}</div>
                   </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-serif text-lg font-semibold text-brand-900 mb-1">{product.name}</h3>
-                  <p className="text-sm text-brand-600 leading-relaxed mb-2">{product.description}</p>
-                  <div className="flex flex-wrap gap-2">
+
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-serif text-base sm:text-lg font-bold text-brand-950 mb-1">{product.name}</h4>
+                  <p className="text-xs text-brand-700/80 leading-relaxed mb-2 line-clamp-2">{product.description}</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {(product.types || []).slice(0, 4).map((t) => (
-                      <span key={t.type} className="inline-flex items-center gap-1 rounded-full bg-cream-100 px-2.5 py-1 text-xs text-brand-600">
+                      <span key={t.type} className="inline-flex items-center gap-1 rounded-full bg-cream-100 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200/60">
                         <Check className="w-3 h-3 text-forest-600" />
                         {t.type}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="text-center md:text-right shrink-0">
-                  {minPrice ? (
-                    <>
-                      <div className="text-xs text-brand-500">From</div>
-                      <div className="font-serif text-2xl font-bold text-brand-900 mb-2">{formatPrice(minPrice)}</div>
-                    </>
-                  ) : (
-                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Out of Stock</div>
-                  )}
+
+                <div className="text-center md:text-right shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-brand-100 w-full md:w-auto flex md:flex-col items-center md:items-end justify-between">
+                  <div>
+                    {minPrice ? (
+                      <div>
+                        <div className="text-[10.5px] text-brand-400 font-bold uppercase tracking-wider">From</div>
+                        <div className="font-serif text-xl font-bold text-brand-950">{formatPrice(minPrice)}</div>
+                      </div>
+                    ) : (
+                      <div className="text-xs font-bold text-gray-400">Out of Stock</div>
+                    )}
+                  </div>
                   <button
                     onClick={() => onViewProduct((product as any)._id || product.id)}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-800 transition-colors"
+                    className="btn-primary py-2 px-5 text-xs font-bold shadow-xs mt-2 md:mt-2"
                   >
-                    View grade
-                    <ArrowRight className="w-4 h-4" />
+                    <span>View & Select</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
-
-      {!empty && (
-        <div className="text-center mt-10">
-          <button onClick={onShop} className="btn-primary">
-            Shop All Cashews
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          })}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -7,11 +7,11 @@ interface FooterProps {
 
 export default function Footer({ onNavigate }: FooterProps) {
   const content = useSiteContent();
-  const { contact, social, footerBio } = content;
+  const { contact, social } = content;
   const mapsUrl = getStoreGoogleMapsUrl(contact);
 
   return (
-    <footer className="bg-brand-950 text-cream-200 border-t border-brand-900">
+    <footer className="bg-brand-950 text-cream-200 border-t border-brand-900 pb-16 lg:pb-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12">
 
@@ -20,7 +20,7 @@ export default function Footer({ onNavigate }: FooterProps) {
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-white ring-2 ring-brand-400/80 shadow-md flex items-center justify-center p-0.5 shrink-0">
                 <img
-                  src="/Krisha_Dry_Fruits_logo.png"
+                  src={content.logo || "/Krisha_Dry_Fruits_logo.png"}
                   alt="Krisha Dry Fruits"
                   className="w-full h-full object-cover rounded-full"
                 />
@@ -30,13 +30,13 @@ export default function Footer({ onNavigate }: FooterProps) {
                   Krisha Dry Fruits
                 </span>
                 <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-cream-400 mt-1">
-                  Artisanal Harvests
+                  Artisanal Harvests & Nuts
                 </span>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-cream-300/80 leading-relaxed font-normal">
-              {footerBio}
+              India's premier purveyor of authentic dry fruits, Himalayan walnuts, Kashmiri Mamra almonds, coastal cashews, and desert dates. Sourced with honor, hand-sorted in Bengaluru.
             </p>
 
             {/* Social Media Links */}
@@ -88,35 +88,45 @@ export default function Footer({ onNavigate }: FooterProps) {
             </div>
           </div>
 
-          {/* Shop Links */}
+          {/* Catalog Links */}
           <div>
             <h3 className="font-serif text-sm sm:text-base font-bold text-cream-50 uppercase tracking-wider mb-4">
-              Catalogue
+              Dry Fruits Catalogue
             </h3>
             <ul className="space-y-2.5 text-xs sm:text-sm">
               <li>
                 <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  All Cashew Grades
-                </button>
-              </li>
-              <li>
-                <button onClick={() => onNavigate('grades')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  Understanding Cashew Sizes
+                  🌰 Kashmiri Mamra & California Almonds
                 </button>
               </li>
               <li>
                 <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  Jumbo King W180
+                  🥜 W180 to W320 Coastal Cashews
                 </button>
               </li>
               <li>
                 <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  Roasted & Salted Cashews
+                  🧠 Snow White Kashmiri Walnut Halves
                 </button>
               </li>
               <li>
                 <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  Honey Glazed Gourmet Cashews
+                  🟢 Iranian Jumbo Roasted Pistachios
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
+                  🌴 Royal Saudi Medjool & Ajwa Dates
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
+                  🍂 Afghani Kandahar Garland Anjeer
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
+                  🎁 Luxury Festive Hampers & Gift Boxes
                 </button>
               </li>
             </ul>
@@ -134,8 +144,13 @@ export default function Footer({ onNavigate }: FooterProps) {
                 </button>
               </li>
               <li>
+                <button onClick={() => onNavigate('grades')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
+                  Sourcing & Grading Guide
+                </button>
+              </li>
+              <li>
                 <button onClick={() => onNavigate('about')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  Our Coastal Story
+                  Our Heritage & Farms
                 </button>
               </li>
               <li>
@@ -144,7 +159,7 @@ export default function Footer({ onNavigate }: FooterProps) {
                 </button>
               </li>
               <li>
-                <span className="text-cream-400/80">Hours: {contact.hours}</span>
+                <span className="text-cream-400/80">Store Hours: {contact.hours}</span>
               </li>
             </ul>
           </div>
@@ -152,7 +167,7 @@ export default function Footer({ onNavigate }: FooterProps) {
           {/* Contact Details & 1-Click Store Location */}
           <div>
             <h3 className="font-serif text-sm sm:text-base font-bold text-cream-50 uppercase tracking-wider mb-4">
-              Direct Contact & Store
+              Flagship Store & Directions
             </h3>
             <ul className="space-y-3.5 text-xs sm:text-sm text-cream-300/80">
               <li className="flex items-start gap-2.5 group">
@@ -215,9 +230,9 @@ export default function Footer({ onNavigate }: FooterProps) {
         <div className="mt-12 pt-6 border-t border-brand-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-cream-400/80">
           <p>© {new Date().getFullYear()} Krisha Dry Fruits (krishadryfruits.in). All rights reserved.</p>
           <div className="flex items-center gap-3 flex-wrap justify-center text-[11px] text-cream-400/90">
-            <span>Dry Fruits Shop in Yeshwanthpur, Bengaluru</span>
+            <span>Premium Dry Fruits Store in Yeshwanthpur, Bengaluru</span>
             <span>•</span>
-            <span>Goa &amp; Karnataka Harvests</span>
+            <span>Kashmir, California &amp; Goa Harvests</span>
             <span>•</span>
             <span>Pan-India Air Dispatch</span>
           </div>

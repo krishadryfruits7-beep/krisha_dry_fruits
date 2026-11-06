@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, ArrowLeft, AlertCircle, LogOut, Loader2, ArrowRight } from 'lucide-react';
+import { useSiteContent } from '@/site-content';
 import { useUser, useClerk } from '@/auth';
 import { isAdminAuthorized, useAdminWhitelist } from '@/admin-auth';
 import AdminLayout from './components/AdminLayout';
@@ -31,6 +32,7 @@ export default function AdminApp() {
   const initialAdmin = getInitialAdminState();
   const [page, setPage] = useState<AdminPage>(initialAdmin.page);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(initialAdmin.orderId);
+  const siteContent = useSiteContent();
 
   const navigate = useCallback((p: AdminPage, orderId?: string, replace = false) => {
     setPage(p);
@@ -184,7 +186,7 @@ export default function AdminApp() {
           <div className="text-center mb-8">
             <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-white ring-4 ring-brand-300/80 shadow-md flex items-center justify-center p-1 mx-auto mb-3">
               <img
-                src="/Krisha_Dry_Fruits_logo.png"
+                src={siteContent.logo || "/Krisha_Dry_Fruits_logo.png"}
                 alt="Krisha Dry Fruits"
                 className="w-full h-full object-cover rounded-full"
               />

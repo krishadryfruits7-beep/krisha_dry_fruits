@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Product } from './types';
 import { PRODUCTS } from './data';
 
-const PRODUCTS_STORAGE_KEY = 'kdf_products_catalog_v2';
+const PRODUCTS_STORAGE_KEY = 'kdf_products_catalog_v5';
 const PRODUCTS_EVENT = 'kdf_products_catalog_change';
 
 export function getStoredProducts(): Product[] {
@@ -10,10 +10,21 @@ export function getStoredProducts(): Product[] {
   try {
     const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
     if (!raw) {
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(PRODUCTS));
       return PRODUCTS;
     }
     const list: Product[] = JSON.parse(raw);
     if (Array.isArray(list) && list.length > 0) {
+      // If cached list is missing new categories (e.g. almonds, walnuts, dates), merge them
+      const hasAlmonds = list.some((p) => p.category === 'almonds' || p.name.toLowerCase().includes('almond'));
+      if (!hasAlmonds) {
+        // Merge missing default products
+        const existingIds = new Set(list.map((p) => p.id || (p as any)._id));
+        const missing = PRODUCTS.filter((p) => !existingIds.has(p.id));
+        const merged = [...list, ...missing];
+        localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(merged));
+        return merged;
+      }
       return list;
     }
     return PRODUCTS;

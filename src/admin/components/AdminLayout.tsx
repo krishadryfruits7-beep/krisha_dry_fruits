@@ -1,5 +1,6 @@
 import { LayoutDashboard, Package, ShoppingBag, LogOut, Menu, ExternalLink, ShieldCheck, Sparkles, Users, Truck } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { useSiteContent } from '@/site-content';
 
 interface AdminLayoutProps {
   page: string;
@@ -20,6 +21,7 @@ const NAV = [
 
 export default function AdminLayout({ page, onNavigate, onLogout, children, userEmail }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const siteContent = useSiteContent();
 
   const Sidebar = () => (
     <aside className="flex flex-col h-full bg-[#180e08] text-cream-100 w-64 border-r border-brand-900/60 shadow-2xl">
@@ -27,7 +29,7 @@ export default function AdminLayout({ page, onNavigate, onLogout, children, user
       <div className="flex items-center gap-3 px-6 py-5 border-b border-brand-900/60">
         <div className="w-10 h-10 rounded-full overflow-hidden bg-white ring-2 ring-brand-400/80 shadow-md flex items-center justify-center p-0.5 shrink-0">
           <img
-            src="/Krisha_Dry_Fruits_logo.png"
+            src={siteContent.logo || "/Krisha_Dry_Fruits_logo.png"}
             alt="Krisha Dry Fruits"
             className="w-full h-full object-cover rounded-full"
           />
