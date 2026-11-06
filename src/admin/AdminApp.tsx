@@ -188,7 +188,7 @@ export default function AdminApp() {
               <img
                 src={siteContent.logo || "/Krisha_Dry_Fruits_logo.png"}
                 alt="Krisha Dry Fruits"
-                className="w-full h-full object-cover rounded-full"
+                className="w-full h-full object-contain rounded-full"
               />
             </div>
             <h1 className="font-serif text-2xl font-bold text-brand-950 tracking-tight">

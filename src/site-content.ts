@@ -171,8 +171,8 @@ export function calculateDeliveryFee({
 
 export function getStoreGoogleMapsUrl(contact?: Partial<ContactInfo> | null): string {
   // 1. Accurate numerical coordinates are the highest reliability navigation target
-  const lat = contact?.latitude?.trim();
-  const lng = contact?.longitude?.trim();
+  const lat = contact?.latitude?.trim() || DEFAULT_SITE_CONTENT.contact.latitude;
+  const lng = contact?.longitude?.trim() || DEFAULT_SITE_CONTENT.contact.longitude;
   if (lat && lng && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
     return `https://www.google.com/maps?q=${lat},${lng}`;
   }
@@ -214,8 +214,8 @@ export function getStoreGoogleMapsUrl(contact?: Partial<ContactInfo> | null): st
 
 export function getStoreEmbedMapUrl(contact?: Partial<ContactInfo> | null): string {
   // 1. Accurate numerical coordinates pin directly on Google Maps Embed
-  const lat = contact?.latitude?.trim();
-  const lng = contact?.longitude?.trim();
+  const lat = contact?.latitude?.trim() || DEFAULT_SITE_CONTENT.contact.latitude;
+  const lng = contact?.longitude?.trim() || DEFAULT_SITE_CONTENT.contact.longitude;
   if (lat && lng && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
     return `https://maps.google.com/maps?q=${lat},${lng}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   }

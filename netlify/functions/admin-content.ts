@@ -234,7 +234,8 @@ export const handler: Handler = async (event) => {
     }
 
     if (method === 'GET') {
-      const doc = await SiteContent.findOne({ key: 'current' }).lean();
+      let doc = await SiteContent.findOne({ key: 'current' }).lean();
+      if (!doc) doc = await SiteContent.findOne({}).lean();
       return { statusCode: 200, headers, body: JSON.stringify(doc || DEFAULT_SITE_CONTENT) };
     }
 
@@ -242,9 +243,11 @@ export const handler: Handler = async (event) => {
       const body = JSON.parse(event.body || '{}');
       const updatePayload: Record<string, any> = {
         key: 'current',
+        logo: body.logo,
         announcement: body.announcement,
         hero: body.hero,
         heroSlides: body.heroSlides,
+        categoryBanners: body.categoryBanners,
         features: body.features,
         locationBanners: body.locationBanners,
         contact: body.contact,

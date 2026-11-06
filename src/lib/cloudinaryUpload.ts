@@ -1,12 +1,12 @@
 import { adminApi } from '@/api';
 
-export async function uploadToCloudinary(file: File): Promise<string> {
+export async function uploadToCloudinary(file: File, folder?: string): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
       try {
-        const res = await adminApi.upload(dataUrl);
+        const res = await adminApi.upload(dataUrl, folder);
         if (res && res.url) {
           resolve(res.url);
           return;

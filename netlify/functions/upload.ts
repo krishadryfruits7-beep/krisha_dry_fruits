@@ -30,9 +30,14 @@ export const handler: Handler = async (event) => {
 
     if (!data) return { statusCode: 400, headers, body: JSON.stringify({ error: 'No image data provided' }) };
 
+    const isBrand = String(folder).toLowerCase().includes('brand') || String(folder).toLowerCase().includes('logo');
+    const transformation = isBrand
+      ? [{ width: 800, height: 800, crop: 'limit', quality: 'auto', fetch_format: 'auto' }]
+      : [{ width: 1600, height: 1600, crop: 'limit', quality: 'auto', fetch_format: 'auto' }];
+
     const result = await cloudinary.uploader.upload(data, {
       folder,
-      transformation: [{ width: 1200, height: 900, crop: 'fill', quality: 'auto', fetch_format: 'auto' }],
+      transformation,
     });
 
     return {

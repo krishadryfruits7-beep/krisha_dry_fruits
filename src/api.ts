@@ -118,10 +118,10 @@ export const adminApi = {
       req<any>(`/admin-orders?id=${id}`, { method: 'DELETE', headers: adminHeaders() }),
     stats: () => req<any>('/admin-orders?action=stats', { headers: adminHeaders() }),
   },
-  upload: (dataUrl: string) =>
+  upload: (dataUrl: string, folder?: string) =>
     req<{ url: string; publicId: string }>('/upload', {
       method: 'POST',
       headers: adminHeaders(),
-      body: JSON.stringify({ data: dataUrl }),
+      body: JSON.stringify({ data: dataUrl, folder }),
     }),
 };

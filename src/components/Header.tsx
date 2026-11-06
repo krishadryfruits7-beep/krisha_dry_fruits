@@ -129,16 +129,13 @@ export default function Header({
       {/* ── Top Announcement Bar (Mockup Style: Deep Olive Green) ─────────────── */}
       <div className="bg-[#1E2816] text-[#E5DFD4] py-2 px-4 text-[11px] sm:text-xs font-medium tracking-wide border-b border-black/20 select-none">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          {/* Left: Free Shipping & 100% Natural Badges */}
+          {/* Left: Dynamic Announcement from Admin Content */}
           <div className="flex items-center gap-2 truncate">
-            <span className="flex items-center gap-1.5 text-[#E7E2D8]">
+            <span className="flex items-center gap-1.5 text-[#E7E2D8] truncate">
               <Leaf className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Free pan-India shipping on orders over ₹1,200</span>
-            </span>
-            <span className="text-[#4E5C46] hidden sm:inline">|</span>
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-[#DCD6CA]">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>100% Natural & Premium Quality</span>
+              <span className="truncate">
+                {content.announcement || 'Free pan-India shipping on orders over ₹1,200 • 100% Natural & Premium Quality'}
+              </span>
             </span>
           </div>
 
@@ -182,7 +179,7 @@ export default function Header({
                   <img
                     src={content.logo || "/Krisha_Dry_Fruits_logo.png"}
                     alt="Krisha Dry Fruits"
-                    className="w-full h-full object-cover rounded-full"
+                    className="w-full h-full object-contain rounded-full"
                   />
                 </div>
                 <div className="flex flex-col text-left">
@@ -614,7 +611,7 @@ export default function Header({
                   <img
                     src={content.logo || "/Krisha_Dry_Fruits_logo.png"}
                     alt="Krisha Dry Fruits"
-                    className="w-full h-full object-cover rounded-full"
+                    className="w-full h-full object-contain rounded-full"
                   />
                 </div>
                 <div className="flex flex-col text-left">

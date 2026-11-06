@@ -186,7 +186,8 @@ export const handler: Handler = async (event) => {
 
   try {
     await connectDB();
-    const doc = await SiteContent.findOne({ key: 'current' }).lean();
+    let doc = await SiteContent.findOne({ key: 'current' }).lean();
+    if (!doc) doc = await SiteContent.findOne({}).lean();
 
     if (!doc) {
       return {
@@ -199,9 +200,11 @@ export const handler: Handler = async (event) => {
     // Merge with DEFAULT_SITE_CONTENT to guarantee all fields exist
     const merged = {
       ...DEFAULT_SITE_CONTENT,
+      logo: doc.logo || DEFAULT_SITE_CONTENT.logo,
       announcement: doc.announcement ?? DEFAULT_SITE_CONTENT.announcement,
       hero: { ...DEFAULT_SITE_CONTENT.hero, ...(doc.hero || {}) },
       heroSlides: Array.isArray(doc.heroSlides) && doc.heroSlides.length > 0 ? doc.heroSlides : DEFAULT_SITE_CONTENT.heroSlides,
+      categoryBanners: Array.isArray(doc.categoryBanners) && doc.categoryBanners.length > 0 ? doc.categoryBanners : DEFAULT_SITE_CONTENT.categoryBanners,
       features: Array.isArray(doc.features) && doc.features.length > 0 ? doc.features : DEFAULT_SITE_CONTENT.features,
       locationBanners: Array.isArray(doc.locationBanners) ? doc.locationBanners : [],
       contact: { ...DEFAULT_SITE_CONTENT.contact, ...(doc.contact || {}) },

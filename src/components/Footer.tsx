@@ -22,7 +22,7 @@ export default function Footer({ onNavigate }: FooterProps) {
                 <img
                   src={content.logo || "/Krisha_Dry_Fruits_logo.png"}
                   alt="Krisha Dry Fruits"
-                  className="w-full h-full object-cover rounded-full"
+                  className="w-full h-full object-contain rounded-full"
                 />
               </div>
               <div className="flex flex-col">

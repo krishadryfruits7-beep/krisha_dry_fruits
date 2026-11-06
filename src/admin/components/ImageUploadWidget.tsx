@@ -8,6 +8,7 @@ interface ImageUploadWidgetProps {
   onChange: (url: string) => void;
   aspectRatio?: 'landscape' | 'square' | 'wide';
   helpText?: string;
+  folder?: string;
 }
 
 export default function ImageUploadWidget({
@@ -16,6 +17,7 @@ export default function ImageUploadWidget({
   onChange,
   aspectRatio = 'landscape',
   helpText,
+  folder,
 }: ImageUploadWidgetProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -40,7 +42,7 @@ export default function ImageUploadWidget({
     setUploading(true);
 
     try {
-      const url = await uploadToCloudinary(file);
+      const url = await uploadToCloudinary(file, folder);
       if (url) {
         onChange(url);
       }
