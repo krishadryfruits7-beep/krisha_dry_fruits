@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, Quote, CheckCircle2, PlusCircle, X, Sparkles, Send, Check } from 'lucide-react';
+import { Star, Quote, CheckCircle2, PlusCircle, X, Sparkles, Send, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStoredReviews, addStoredReview, syncWithServerReviews, type CustomerReview } from '@/reviews-storage';
 import { api } from '@/api';
 import { useUser } from '@/auth';
@@ -32,6 +32,9 @@ export default function Testimonials() {
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+
+  const visibleReviews = showAllReviews ? reviews : reviews.slice(0, 3);
 
   // Sync with server reviews on mount
   useEffect(() => {
@@ -121,7 +124,7 @@ export default function Testimonials() {
 
         {/* Real Reviews Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {reviews.map((t, idx) => (
+          {visibleReviews.map((t, idx) => (
             <div
               key={t.id || t._id || `${t.name}-${idx}`}
               className="card card-hover p-6 sm:p-7 bg-white/95 border border-brand-200/70 flex flex-col justify-between shadow-luxury transition-all"
@@ -169,6 +172,29 @@ export default function Testimonials() {
             </div>
           ))}
         </div>
+
+        {/* View More / Show Less Toggle Button */}
+        {reviews.length > 3 && (
+          <div className="mt-8 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAllReviews((prev) => !prev)}
+              className="px-6 py-2.5 rounded-full border border-brand-300 bg-white hover:bg-brand-900 hover:text-white text-brand-900 font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-xs hover:shadow-md transition-all cursor-pointer"
+            >
+              {showAllReviews ? (
+                <>
+                  <span>Show Fewer Reviews</span>
+                  <ChevronUp className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  <span>View All {reviews.length} Verified Reviews</span>
+                  <ChevronDown className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Interactive Write Review Modal */}

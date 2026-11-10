@@ -88,45 +88,35 @@ export default function Footer({ onNavigate }: FooterProps) {
             </div>
           </div>
 
-          {/* Catalog Links */}
+          {/* Explore Collections */}
           <div>
             <h3 className="font-serif text-sm sm:text-base font-bold text-cream-50 uppercase tracking-wider mb-4">
-              Dry Fruits Catalogue
+              Explore Collections
             </h3>
             <ul className="space-y-2.5 text-xs sm:text-sm">
               <li>
                 <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  🌰 Kashmiri Mamra & California Almonds
+                  All Dry Fruits & Nuts
                 </button>
               </li>
               <li>
                 <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  🥜 W180 to W320 Coastal Cashews
+                  Kashmiri Mamra Almonds
                 </button>
               </li>
               <li>
                 <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  🧠 Snow White Kashmiri Walnut Halves
+                  W180 Jumbo King Cashews
                 </button>
               </li>
               <li>
                 <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  🟢 Iranian Jumbo Roasted Pistachios
+                  Royal Saudi Medjool Dates
                 </button>
               </li>
               <li>
                 <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  🌴 Royal Saudi Medjool & Ajwa Dates
-                </button>
-              </li>
-              <li>
-                <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  🍂 Afghani Kandahar Garland Anjeer
-                </button>
-              </li>
-              <li>
-                <button onClick={() => onNavigate('products')} className="text-cream-300/80 hover:text-cream-50 transition-colors">
-                  🎁 Luxury Festive Hampers & Gift Boxes
+                  Luxury Festive Hampers
                 </button>
               </li>
             </ul>

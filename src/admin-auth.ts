@@ -98,18 +98,23 @@ export async function addAdminEmail(email: string): Promise<{ success: boolean; 
   if (current.includes(clean)) {
     return { success: false, message: 'This email is already an authorized administrator.' };
   }
-  const updated = [...current, clean];
-  localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(updated));
-  window.dispatchEvent(new CustomEvent(ADMIN_EVENT, { detail: updated }));
 
-  // Sync to database
+  const candidate = [...current, clean];
+
+  // Directly commit to MongoDB Atlas
   try {
-    await adminApi.content.updateAdmins(updated);
-  } catch (err) {
-    console.warn('Could not sync admin to cloud database immediately:', err);
+    const res = await adminApi.content.updateAdmins(candidate);
+    const confirmed = res?.adminEmails || candidate;
+    syncAdminWhitelist(confirmed);
+    return { success: true, message: `Admin privileges granted to ${clean} and saved in MongoDB.` };
+  } catch (err: any) {
+    console.error('Failed to update admin in MongoDB:', err);
+    syncAdminWhitelist(candidate);
+    return {
+      success: true,
+      message: `Admin privileges granted to ${clean} (saved locally, cloud sync pending).`,
+    };
   }
-
-  return { success: true, message: `Admin privileges granted to ${clean}.` };
 }
 
 export async function removeAdminEmail(email: string): Promise<{ success: boolean; message: string }> {
@@ -118,18 +123,19 @@ export async function removeAdminEmail(email: string): Promise<{ success: boolea
     return { success: false, message: 'Cannot revoke access for a permanent root administrator.' };
   }
   const current = getAdminWhitelist();
-  const updated = current.filter((e) => e !== clean);
-  localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(updated));
-  window.dispatchEvent(new CustomEvent(ADMIN_EVENT, { detail: updated }));
+  const candidate = current.filter((e) => e !== clean);
 
-  // Sync to database
+  // Directly commit to MongoDB Atlas
   try {
-    await adminApi.content.updateAdmins(updated);
-  } catch (err) {
-    console.warn('Could not sync admin revocation to cloud database immediately:', err);
+    const res = await adminApi.content.updateAdmins(candidate);
+    const confirmed = res?.adminEmails || candidate;
+    syncAdminWhitelist(confirmed);
+    return { success: true, message: `Admin privileges revoked for ${clean} from MongoDB.` };
+  } catch (err: any) {
+    console.error('Failed to revoke admin in MongoDB:', err);
+    syncAdminWhitelist(candidate);
+    return { success: true, message: `Admin privileges revoked for ${clean} (local, cloud sync pending).` };
   }
-
-  return { success: true, message: `Admin privileges revoked for ${clean}.` };
 }
 
 export function useAdminWhitelist() {

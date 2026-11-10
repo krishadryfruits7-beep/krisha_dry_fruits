@@ -15,17 +15,23 @@ import { useAdminWhitelist, isPermanentAdmin } from '@/admin-auth';
 export default function AdminAdmins() {
   const { emails, addAdmin, removeAdmin } = useAdminWhitelist();
   const [newEmail, setNewEmail] = useState('');
+  const [adding, setAdding] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ text: string; error?: boolean } | null>(null);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail.trim()) return;
-    const res = await addAdmin(newEmail);
-    setStatusMsg({ text: res.message, error: !res.success });
-    if (res.success) {
-      setNewEmail('');
+    if (!newEmail.trim() || adding) return;
+    setAdding(true);
+    try {
+      const res = await addAdmin(newEmail);
+      setStatusMsg({ text: res.message, error: !res.success });
+      if (res.success) {
+        setNewEmail('');
+      }
+    } finally {
+      setAdding(false);
+      setTimeout(() => setStatusMsg(null), 4000);
     }
-    setTimeout(() => setStatusMsg(null), 4000);
   };
 
   const handleRemove = async (email: string) => {
@@ -110,10 +116,11 @@ export default function AdminAdmins() {
 
             <button
               type="submit"
-              className="w-full btn-primary py-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2"
+              disabled={adding}
+              className="w-full btn-primary py-3 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
             >
               <UserPlus className="w-4 h-4" />
-              <span>Grant Admin Access</span>
+              <span>{adding ? 'Saving to Database...' : 'Grant Admin Access'}</span>
             </button>
           </form>
 

@@ -34,7 +34,7 @@ export default function CategoryShowcase({
     <section className="bg-[#FAF7F2] py-5 sm:py-7 border-b border-[#EEDBCA]/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Responsive Grid based on card count */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+        <div className={`grid grid-cols-2 sm:grid-cols-3 ${items.length <= 3 ? 'lg:grid-cols-3' : items.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-5'} gap-3 sm:gap-4 lg:gap-5`}>
           {items.map((item, index) => {
             const targetCat = item.categoryIds && item.categoryIds.length > 0
               ? item.categoryIds.join(',')

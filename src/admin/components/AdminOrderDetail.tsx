@@ -343,7 +343,13 @@ export default function AdminOrderDetail({ orderId, onBack }: { orderId: string;
               : `https://maps.google.com/maps?q=${encodeURIComponent(googleMapsQuery)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
 
             const copyFullAddress = () => {
-              const formatted = `${c.fullName || 'Valued Customer'}\n${c.doorNo ? `Flat/Door: ${c.doorNo}\n` : ''}${c.address || ''}\n${c.city || ''}, ${c.state || ''} - ${c.pincode || ''}\n${hasCoords ? `Exact GPS Pin: ${c.lat}, ${c.lng}\n` : ''}Phone: ${c.phone || ''}\nEmail: ${c.email || ''}`;
+              // Copy PURE delivery address only (no customer name, email, phone, or GPS coords)
+              const addressLines = [
+                c.doorNo ? `Flat/Door: ${c.doorNo}` : '',
+                c.address || '',
+                [c.city, c.state].filter(Boolean).join(', ') + (c.pincode ? ` - ${c.pincode}` : ''),
+              ].filter(Boolean);
+              const formatted = addressLines.join('\n');
               navigator.clipboard.writeText(formatted);
               setCopiedAddress(true);
               setTimeout(() => setCopiedAddress(false), 2200);

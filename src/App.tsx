@@ -566,124 +566,155 @@ function App() {
                   </div>
                 </div>
 
-                {/* 1. Category Switcher */}
-                <div className="space-y-1.5">
-                  <div className="text-[11px] font-bold text-brand-500 uppercase tracking-wider">
-                    Superfood Category:
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                    <button
-                      onClick={() => setSelectedCategory(null)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        !selectedCategory || selectedCategory === 'all'
-                          ? 'bg-brand-900 text-cream-50 shadow-xs'
-                          : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
-                      }`}
-                    >
-                      ✨ All Categories
-                    </button>
-                    {availableCategories.map((cat) => {
-                      const isSelected = selectedCategory === cat.id;
-                      return (
-                        <button
-                          key={cat.id}
-                          onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                            isSelected
-                              ? 'bg-brand-900 text-cream-50 font-bold shadow-xs'
-                              : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
-                          }`}
-                        >
-                          <span>{cat.icon}</span>
-                          <span>{cat.name.split(' ')[0]}</span>
-                          {cat.hindiName && (
-                            <span className="text-[10px] opacity-75">({cat.hindiName})</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. Caliber / Grade Filters (if applicable) */}
-                {availableGrades.length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap text-xs pt-3 border-t border-brand-100/60">
-                    <span className="text-[11px] font-bold text-brand-500 uppercase tracking-wider min-w-[70px]">
-                      Grade:
-                    </span>
-                    <button
-                      onClick={() => setSelectedGrade(null)}
-                      className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
-                        !selectedGrade
-                          ? 'bg-brand-900 text-cream-50 font-bold shadow-xs'
-                          : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
-                      }`}
-                    >
-                      All Grades
-                    </button>
-                    {availableGrades.slice(0, 10).map((g) => (
+                {/* 1. Quick Category Scroll Strip (Single Line, Never Wraps) */}
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer ${
+                      !selectedCategory || selectedCategory === 'all'
+                        ? 'bg-brand-900 text-cream-50 shadow-xs'
+                        : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
+                    }`}
+                  >
+                    ✨ All Products
+                  </button>
+                  {availableCategories.slice(0, 8).map((cat) => {
+                    const isSelected = selectedCategory === cat.id;
+                    return (
                       <button
-                        key={g}
-                        onClick={() => setSelectedGrade(selectedGrade === g ? null : g)}
-                        className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
-                          selectedGrade === g
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
+                          isSelected
                             ? 'bg-brand-900 text-cream-50 font-bold shadow-xs'
                             : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
                         }`}
                       >
-                        {g}
+                        <span>{cat.icon}</span>
+                        <span>{cat.name.split(' ')[0]}</span>
+                        {cat.hindiName && (
+                          <span className="text-[10px] opacity-75">({cat.hindiName})</span>
+                        )}
                       </button>
-                    ))}
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
 
-                {/* 3. Origin Filters */}
-                {availableOrigins.length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap text-xs pt-2 border-t border-brand-100/60">
-                    <span className="text-[11px] font-bold text-brand-500 uppercase tracking-wider min-w-[70px]">
-                      Origin:
-                    </span>
-                    <button
-                      onClick={() => setSelectedLocation(null)}
-                      className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                        !selectedLocation
-                          ? 'bg-forest-800 text-white font-bold shadow-xs'
-                          : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
-                      }`}
+                {/* 2. Compact Structured Dropdown Filters (Scales to 1000s of items without clutter) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-3 border-t border-brand-100/60">
+                  {/* Category Dropdown */}
+                  <div>
+                    <label className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-1">
+                      Category
+                    </label>
+                    <select
+                      value={selectedCategory || ''}
+                      onChange={(e) => setSelectedCategory(e.target.value || null)}
+                      className="w-full text-xs py-2 px-3 bg-cream-50/70 border border-brand-200 rounded-xl text-brand-900 focus:outline-none focus:ring-1 focus:ring-brand-700 font-medium"
                     >
-                      All Origins
-                    </button>
-                    {availableOrigins.map((orig) => (
-                      <button
-                        key={orig}
-                        onClick={() => setSelectedLocation(selectedLocation === orig ? null : orig)}
-                        className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                          selectedLocation === orig
-                            ? 'bg-forest-800 text-white font-bold shadow-xs'
-                            : 'bg-cream-100 hover:bg-cream-200 text-brand-800'
-                        }`}
-                      >
-                        📍 {orig}
-                      </button>
-                    ))}
+                      <option value="">All Categories ({availableCategories.length})</option>
+                      {availableCategories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {c.hindiName ? `(${c.hindiName})` : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
+
+                  {/* Grade Dropdown */}
+                  <div>
+                    <label className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-1">
+                      Grade & Caliber
+                    </label>
+                    <select
+                      value={selectedGrade || ''}
+                      onChange={(e) => setSelectedGrade(e.target.value || null)}
+                      className="w-full text-xs py-2 px-3 bg-cream-50/70 border border-brand-200 rounded-xl text-brand-900 focus:outline-none focus:ring-1 focus:ring-brand-700 font-medium"
+                    >
+                      <option value="">All Grades ({availableGrades.length})</option>
+                      {availableGrades.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Origin Dropdown */}
+                  <div>
+                    <label className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-1">
+                      Origin / Region
+                    </label>
+                    <select
+                      value={selectedLocation || ''}
+                      onChange={(e) => setSelectedLocation(e.target.value || null)}
+                      className="w-full text-xs py-2 px-3 bg-cream-50/70 border border-brand-200 rounded-xl text-brand-900 focus:outline-none focus:ring-1 focus:ring-brand-700 font-medium"
+                    >
+                      <option value="">All Sourcing Origins ({availableOrigins.length})</option>
+                      {availableOrigins.map((orig) => (
+                        <option key={orig} value={orig}>
+                          {orig}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Quick Search Input */}
+                  <div>
+                    <label className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-1">
+                      Filter by Name
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search badam, kaju..."
+                        className="w-full text-xs py-2 pl-3 pr-8 bg-cream-50/70 border border-brand-200 rounded-xl text-brand-900 focus:outline-none focus:ring-1 focus:ring-brand-700 placeholder:text-brand-400"
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-400 hover:text-brand-900 text-xs font-bold"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
                 {/* Active Filter Clear Bar */}
                 {(selectedCategory || selectedGrade || selectedVariety || selectedLocation || searchQuery) && (
-                  <div className="pt-2 flex items-center justify-between text-xs text-brand-600 border-t border-brand-100">
-                    <span>
-                      Filtered by:{' '}
-                      {[
-                        selectedCategory ? `Category: ${selectedCategory}` : null,
-                        selectedGrade ? `Grade: ${selectedGrade}` : null,
-                        selectedVariety ? `Variety: ${selectedVariety}` : null,
-                        selectedLocation ? `Origin: ${selectedLocation}` : null,
-                        searchQuery ? `Search: "${searchQuery}"` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' • ')}
-                    </span>
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-brand-600 border-t border-brand-100">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-brand-800">Active Filters:</span>
+                      {selectedCategory && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-100 text-brand-900 font-medium text-[11px]">
+                          Category: {availableCategories.find((c) => c.id === selectedCategory)?.name || selectedCategory}
+                          <button onClick={() => setSelectedCategory(null)} className="hover:text-red-600 ml-0.5">✕</button>
+                        </span>
+                      )}
+                      {selectedGrade && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-100 text-brand-900 font-medium text-[11px]">
+                          Grade: {selectedGrade}
+                          <button onClick={() => setSelectedGrade(null)} className="hover:text-red-600 ml-0.5">✕</button>
+                        </span>
+                      )}
+                      {selectedLocation && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-forest-100 text-forest-900 font-medium text-[11px]">
+                          Origin: {selectedLocation}
+                          <button onClick={() => setSelectedLocation(null)} className="hover:text-red-600 ml-0.5">✕</button>
+                        </span>
+                      )}
+                      {searchQuery && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-medium text-[11px]">
+                          "{searchQuery}"
+                          <button onClick={() => setSearchQuery('')} className="hover:text-red-600 ml-0.5">✕</button>
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={() => {
                         setSelectedCategory(null);
@@ -692,7 +723,7 @@ function App() {
                         setSelectedLocation(null);
                         setSearchQuery('');
                       }}
-                      className="text-red-600 hover:text-red-800 font-semibold underline cursor-pointer"
+                      className="text-red-600 hover:text-red-800 font-semibold underline cursor-pointer shrink-0"
                     >
                       Reset All Filters
                     </button>

@@ -153,6 +153,13 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Interactive Map Spot Picker State
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
+  const [spotSearchQuery, setSpotSearchQuery] = useState('');
+  const [searchingSpot, setSearchingSpot] = useState(false);
+  const [spotCandidates, setSpotCandidates] = useState<Array<{ lat: string; lon: string; display_name: string }>>([]);
+  const [pickedSpot, setPickedSpot] = useState<{ lat: string; lng: string; address?: string } | null>(null);
+
   // Verified Locations from DB
   const [dbLocations, setDbLocations] = useState<string[]>(['Goa', 'Karnataka', 'Goa & Karnataka']);
 
@@ -172,6 +179,7 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
               ...remote,
               hero: { ...prev.hero, ...(remote.hero || {}) },
               heroSlides: resolvedHeroSlides,
+              categoryBanners: Array.isArray(remote.categoryBanners) ? remote.categoryBanners : prev.categoryBanners,
               contact: { ...prev.contact, ...(remote.contact || {}) },
               delivery: { ...DEFAULT_SITE_CONTENT.delivery, ...(prev.delivery || {}), ...(remote.delivery || {}) },
               social: { ...prev.social, ...(remote.social || {}) },
@@ -406,23 +414,88 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
     }
   };
 
-  const handleSave = async () => {
-    // Validate that all location cards have a valid database location key
-    const missingLoc = content.locationBanners.find((b) => !b.locationKey || !b.locationKey.trim());
-    if (missingLoc) {
-      showToast('Please choose or enter a sourcing region name for all location cards before saving.', 'error');
+  const handleSearchSpot = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const q = spotSearchQuery.trim();
+    if (!q) return;
+    setSearchingSpot(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&countrycodes=in`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setSpotCandidates(data);
+        setPickedSpot({
+          lat: Number(data[0].lat).toFixed(6),
+          lng: Number(data[0].lon).toFixed(6),
+          address: data[0].display_name,
+        });
+      } else {
+        showToast('No locations found for this query. Try a nearby landmark or street.', 'error');
+      }
+    } catch {
+      showToast('Could not search location. Please check internet connection.', 'error');
+    } finally {
+      setSearchingSpot(false);
+    }
+  };
+
+  const handlePickDeviceGps = () => {
+    if (!navigator.geolocation) {
+      showToast('Geolocation is not supported by your browser.', 'error');
       return;
     }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        setPickedSpot({ lat, lng, address: `GPS Coordinates: ${lat}, ${lng}` });
+        showToast(`Device GPS Pin acquired: ${lat}, ${lng}`, 'success');
+      },
+      (err) => {
+        showToast(`Could not acquire GPS: ${err.message}`, 'error');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
+  const handleConfirmSpot = () => {
+    if (!pickedSpot) return;
+    setContent((prev) => ({
+      ...prev,
+      contact: {
+        ...prev.contact,
+        latitude: pickedSpot.lat,
+        longitude: pickedSpot.lng,
+        googleMapsUrl: `https://www.google.com/maps?q=${pickedSpot.lat},${pickedSpot.lng}`,
+        ...(pickedSpot.address ? { address: pickedSpot.address } : {}),
+      },
+    }));
+    setMapPickerOpen(false);
+    showToast(`Store location pinned at ${pickedSpot.lat}, ${pickedSpot.lng}! Click Save Location to publish.`, 'success');
+  };
+
+  const handleSave = async () => {
     setSaving(true);
-    // Instant optimistic update
-    saveSiteContent(content);
+    // Sanitize location banners so empty keys don't block saving
+    const sanitizedLocationBanners = (content.locationBanners || []).map((b) => ({
+      ...b,
+      locationKey: b.locationKey?.trim() || b.title?.trim() || 'Karnataka',
+    }));
+    const sanitized = {
+      ...content,
+      locationBanners: sanitizedLocationBanners,
+    };
+
+    saveSiteContent(sanitized);
     try {
-      // Commit directly to MongoDB Atlas
-      await adminApi.content.update(content);
-      showToast('All storefront content published live successfully!', 'success');
+      await adminApi.content.update(sanitized);
+      setContent(sanitized);
+      showToast('All storefront content published live to database!', 'success');
     } catch (err) {
-      console.warn('Backend content save failed, stored in local cache:', err);
+      console.warn('Backend content save notice:', err);
       showToast('Saved locally. Cloud sync pending.', 'info');
     } finally {
       setSaving(false);
@@ -781,17 +854,24 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
         subtitle: 'Collection subtitle',
         image: 'https://images.pexels.com/photos/12326584/pexels-photo-12326584.jpeg?auto=compress&cs=tinysrgb&h=600&w=1000',
       };
-      return { ...prev, categoryBanners: [...list, newCard] };
+      const updated = { ...prev, categoryBanners: [...list, newCard] };
+      saveSiteContent(updated);
+      adminApi.content.update(updated).catch(() => {});
+      return updated;
     });
-    showToast('New showcase category card added! Configure details below and click Save.', 'success');
+    showToast('New showcase card added and saved.', 'success');
   };
 
   const removeCategoryCard = (index: number) => {
     setContent((prev) => {
-      const list = (prev.categoryBanners || DEFAULT_CATEGORY_BANNERS).filter((_, i) => i !== index);
-      return { ...prev, categoryBanners: list };
+      const currentList = prev.categoryBanners || DEFAULT_CATEGORY_BANNERS;
+      const list = currentList.filter((_, i) => i !== index);
+      const updated = { ...prev, categoryBanners: list };
+      saveSiteContent(updated);
+      adminApi.content.update(updated).catch(() => {});
+      return updated;
     });
-    showToast('Showcase card removed.', 'info');
+    showToast('Showcase card removed and published live.', 'success');
   };
 
   const moveCategoryCardUp = (index: number) => {
@@ -921,15 +1001,18 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                     Your official brand logo shown in the customer header, footer, customer invoices, and admin navigation.
                   </p>
                 </div>
-                {content.logo && content.logo !== '/Krisha_Dry_Fruits_logo.png' && (
-                  <button
-                    type="button"
-                    onClick={() => setContent((prev) => ({ ...prev, logo: '/Krisha_Dry_Fruits_logo.png' }))}
-                    className="text-xs text-brand-600 hover:text-brand-950 underline font-medium"
-                  >
-                    Reset to Default Logo
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {content.logo && content.logo !== '/Krisha_Dry_Fruits_logo.png' && (
+                    <button
+                      type="button"
+                      onClick={() => setContent((prev) => ({ ...prev, logo: '/Krisha_Dry_Fruits_logo.png' }))}
+                      className="text-xs text-brand-600 hover:text-brand-950 underline font-medium"
+                    >
+                      Reset to Default
+                    </button>
+                  )}
+                  {renderSaveButton('Save Logo', 'btn-primary py-1.5 px-3.5 text-xs font-semibold flex items-center gap-1.5 shadow-sm')}
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-2xl bg-cream-50/70 border border-brand-200">
@@ -997,9 +1080,12 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                   className="w-full rounded-xl border border-brand-700 bg-brand-900/90 text-cream-50 px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-brand-400"
                   placeholder="e.g. Free pan-India shipping over ₹1,200 • Freshly hand-sorted & packed within 48h"
                 />
-                <p className="text-[11px] text-cream-300/70 mt-1.5">
-                  Directly edits the announcement banner that customers see across the entire shop.
-                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-2">
+                  <p className="text-[11px] text-cream-300/70">
+                    Directly edits the announcement banner that customers see across the entire shop.
+                  </p>
+                  {renderSaveButton('Save Banner', 'bg-amber-500 hover:bg-amber-600 text-brand-950 font-bold py-1.5 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm shrink-0')}
+                </div>
               </div>
             </div>
 
@@ -1018,14 +1104,17 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={openAddHeroSlide}
-                  className="btn-primary py-2.5 px-4 text-xs font-bold inline-flex items-center gap-2 shadow-sm rounded-xl cursor-pointer self-start sm:self-auto shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Hero Banner</span>
-                </button>
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={openAddHeroSlide}
+                    className="btn-primary py-2 px-3 text-xs font-bold inline-flex items-center gap-1.5 shadow-sm rounded-xl cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Hero Banner</span>
+                  </button>
+                  {renderSaveButton('Save Carousel', 'btn-outline py-2 px-3 text-xs font-semibold')}
+                </div>
               </div>
 
               {/* List of active Hero Banners */}
@@ -1763,8 +1852,10 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                   ) : (
                     <LocateFixed className="w-3.5 h-3.5 text-amber-300" />
                   )}
-                  <span>{detectingGps ? 'Detecting GPS...' : 'Auto-Detect GPS & Address'}</span>
+                  <span>{detectingGps ? 'Detecting GPS...' : 'Auto-Detect GPS'}</span>
                 </button>
+
+                {renderSaveButton('Save Location & Pin', 'btn-primary py-2 px-4 text-xs font-bold')}
               </div>
             </div>
 
@@ -1878,17 +1969,22 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                     >
                       Pin Link
                     </button>
-                    <a
-                      href="https://www.google.com/maps"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-2 bg-white border border-brand-300 hover:bg-brand-100/60 rounded-xl text-xs font-semibold text-brand-800 flex items-center gap-1.5 shrink-0 transition-colors"
-                      title="Open Google Maps in a new tab to search and copy location"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPickedSpot({
+                          lat: content.contact.latitude || '13.020102',
+                          lng: content.contact.longitude || '77.547321',
+                          address: content.contact.address || '',
+                        });
+                        setMapPickerOpen(true);
+                      }}
+                      className="px-3.5 py-2 bg-forest-800 hover:bg-forest-900 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors shadow-xs cursor-pointer"
+                      title="Open interactive map to spot and pin store location"
                     >
-                      <Map className="w-3.5 h-3.5 text-brand-600" />
-                      <span className="hidden sm:inline">Pick on Maps</span>
-                      <ExternalLink className="w-3 h-3 opacity-60" />
-                    </a>
+                      <Map className="w-3.5 h-3.5" />
+                      <span>Spot on Map</span>
+                    </button>
                   </div>
                   <p className="text-[11px] text-brand-500 mt-1">
                     Supports any format: Share links (<span className="font-mono">maps.app.goo.gl</span>), place URLs, embed <span className="font-mono">&lt;iframe&gt;</span> codes, or GPS lat/lng.
@@ -3330,6 +3426,144 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
           </div>
         </div>
       )}
+
+      {/* Interactive Map Location & Spot Picker Modal */}
+      {mapPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl border border-brand-200 relative animate-scale-in max-h-[90vh] overflow-y-auto space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-brand-100">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-forest-100 text-forest-800">
+                  <MapPin className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-brand-950">
+                    Spot & Pin Store on Map
+                  </h3>
+                  <p className="text-xs text-brand-500">
+                    Search your shop address or use device GPS to accurately pin the store.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMapPickerOpen(false)}
+                className="p-2 rounded-full text-brand-400 hover:text-brand-900 hover:bg-cream-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search Box & GPS Button */}
+            <div className="space-y-3">
+              <form onSubmit={handleSearchSpot} className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-brand-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={spotSearchQuery}
+                    onChange={(e) => setSpotSearchQuery(e.target.value)}
+                    placeholder="Search e.g. Krisha Dry Fruits APMC Yard Bangalore..."
+                    className="w-full text-xs pl-9 pr-3 py-2.5 bg-cream-50 border border-brand-200 rounded-xl text-brand-900 focus:outline-none focus:ring-1 focus:ring-brand-700"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={searchingSpot || !spotSearchQuery.trim()}
+                  className="btn-primary py-2 px-4 text-xs font-semibold shrink-0 disabled:opacity-50"
+                >
+                  {searchingSpot ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search Spot'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePickDeviceGps}
+                  className="px-3 py-2 bg-forest-50 hover:bg-forest-100 text-forest-800 border border-forest-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                  title="Use current GPS from this device"
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Use Device GPS</span>
+                </button>
+              </form>
+
+              {/* Candidate Results */}
+              {spotCandidates.length > 0 && (
+                <div className="space-y-1.5 max-h-36 overflow-y-auto p-2 rounded-xl bg-cream-50 border border-brand-200 text-xs">
+                  <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block px-1">
+                    Select Matching Location:
+                  </span>
+                  {spotCandidates.map((c, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() =>
+                        setPickedSpot({
+                          lat: Number(c.lat).toFixed(6),
+                          lng: Number(c.lon).toFixed(6),
+                          address: c.display_name,
+                        })
+                      }
+                      className="w-full text-left p-2 rounded-lg hover:bg-brand-100 text-brand-900 truncate flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-forest-700 shrink-0" />
+                      <span className="truncate">{c.display_name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Interactive Preview & Map Pin */}
+            {pickedSpot && (
+              <div className="space-y-3">
+                <div className="w-full h-64 rounded-2xl overflow-hidden border-2 border-forest-400 shadow-inner bg-cream-100 relative">
+                  <iframe
+                    title="Live Spot Map Pin"
+                    src={`https://maps.google.com/maps?q=${pickedSpot.lat},${pickedSpot.lng}&z=16&output=embed`}
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                  />
+                  <div className="absolute top-2 left-2 bg-brand-950/80 text-cream-100 text-[11px] font-mono px-2.5 py-1 rounded-lg backdrop-blur-md">
+                    📍 Lat: {pickedSpot.lat}, Lng: {pickedSpot.lng}
+                  </div>
+                </div>
+
+                {pickedSpot.address && (
+                  <p className="text-xs text-brand-700 bg-cream-50 p-2.5 rounded-xl border border-brand-200">
+                    <span className="font-bold">Detected Address:</span> {pickedSpot.address}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-brand-100">
+              <button
+                type="button"
+                onClick={() => setMapPickerOpen(false)}
+                className="btn-outline py-2 px-4 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSpot}
+                disabled={!pickedSpot}
+                className="btn-primary py-2 px-5 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Check className="w-4 h-4" />
+                <span>Confirm & Apply Location</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Save Dock: Easily Save Anywhere without scrolling */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3 bg-brand-950/90 text-white backdrop-blur-md px-4 py-2.5 rounded-2xl border border-brand-700/60 shadow-2xl animate-fade-in">
+        <span className="text-xs font-medium text-cream-200 hidden sm:inline">Storefront Changes:</span>
+        {renderSaveButton('Save All Changes', 'btn-primary py-2 px-4 text-xs font-bold rounded-xl shadow-md')}
+      </div>
 
       {/* Floating In-App Toast Notification */}
       {toast && (

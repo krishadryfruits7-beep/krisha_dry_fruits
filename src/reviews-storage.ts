@@ -47,28 +47,6 @@ export const INITIAL_SEED_REVIEWS: CustomerReview[] = [
     verified: true,
     createdAt: '2026-09-28T09:15:00.000Z',
   },
-  {
-    id: 'rev-4',
-    name: 'Vikramaditya Mehta',
-    location: 'New Delhi',
-    gradeBought: 'Royal Heritage 4-in-1 Keepsake Box',
-    rating: 5,
-    text: 'Ordered 25 boxes as festive corporate gifts. The solid wooden chest with brass inlays looks regal, and the Mamra, W180 Cashews, Akhrot, and Pistachios inside are exceptional quality. Highly recommended!',
-    avatar: 'V',
-    verified: true,
-    createdAt: '2026-10-05T12:00:00.000Z',
-  },
-  {
-    id: 'rev-5',
-    name: 'Farhana Qureshi',
-    location: 'Hyderabad, Telangana',
-    gradeBought: 'Royal Saudi Medjool Dates & Ajwa',
-    rating: 5,
-    text: 'Melt-in-the-mouth Medjool dates with natural caramel notes and zero added sugar. The Madinah Ajwa dates are fresh, dark, and therapeutic. Will definitely be a regular customer.',
-    avatar: 'F',
-    verified: true,
-    createdAt: '2026-10-12T16:20:00.000Z',
-  },
 ];
 
 const REVIEWS_STORAGE_KEY = 'kdf_customer_reviews_v2';
