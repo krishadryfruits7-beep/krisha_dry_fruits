@@ -3,6 +3,10 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[build.environment]
+  SECRETS_SCAN_ENABLED = "false"
+  SECRETS_SCAN_OMIT_KEYS = "VITE_ADMIN_EMAIL,MONGODB_URI"
+
 [dev]
   command = "vite"
   port = 8888

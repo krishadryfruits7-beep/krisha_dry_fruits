@@ -393,22 +393,20 @@ const MOCK_PRODUCTS = [
 ];
 
 async function seed() {
-  const uris = [
-    process.env.MONGODB_URI,
-    'mongodb+srv://krishadryfruits7_db_user:Krisha_Dry_Fruits@cluster0.rypicqc.mongodb.net/krisha_dry_fruits?retryWrites=true&w=majority&appName=Cluster0'
-  ].filter(Boolean);
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.error('MONGODB_URI environment variable is required for seeding.');
+    process.exit(1);
+  }
 
   let connected = false;
-  for (const uri of uris) {
-    try {
-      console.log('Connecting to database...');
-      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-      console.log('Successfully connected to MongoDB!');
-      connected = true;
-      break;
-    } catch (e) {
-      console.warn('Connection failed for', uri.split('@')[1] || uri, e.message);
-    }
+  try {
+    console.log('Connecting to database...');
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+    console.log('Successfully connected to MongoDB!');
+    connected = true;
+  } catch (e) {
+    console.warn('Connection failed:', e.message);
   }
 
   if (!connected) {
