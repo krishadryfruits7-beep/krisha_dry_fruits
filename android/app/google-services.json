@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:305997754189:android:4b7c8d9e0f1a2b3c4d5e6f",
+        "mobilesdk_app_id": "1:305997754189:android:81baee02a37625b1a09104",
         "android_client_info": {
           "package_name": "com.krishadryfruits.admin"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDummyKeyKrishaAdminApp1234567890"
+          "current_key": "AIzaSyAvWdwRasVJ9EDQT_DOooGcrbeJNdrqnKM"
         }
       ],
       "services": {

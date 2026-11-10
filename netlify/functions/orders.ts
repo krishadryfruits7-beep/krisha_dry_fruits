@@ -2,6 +2,7 @@ import type { Handler } from '@netlify/functions';
 import mongoose from 'mongoose';
 import { connectDB } from '../../src/lib/mongodb';
 import Order from '../../src/lib/models/Order';
+import { sendNewOrderPushNotification } from './push-notifications';
 
 export const handler: Handler = async (event) => {
   const headers = {
@@ -59,6 +60,14 @@ export const handler: Handler = async (event) => {
       }
 
       const order = await Order.create(body);
+
+      // Instant push notification alert to Admin Android App
+      try {
+        await sendNewOrderPushNotification(order);
+      } catch (pushErr) {
+        console.warn('Push notification warning:', pushErr);
+      }
+
       return { statusCode: 201, headers, body: JSON.stringify(order) };
     }
 
