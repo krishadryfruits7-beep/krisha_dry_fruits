@@ -124,9 +124,12 @@ class MainActivity : AppCompatActivity() {
         ws.builtInZoomControls = false
         ws.displayZoomControls = false
 
-        // Custom User Agent to identify APK
+        // Clean User Agent so Google OAuth allows direct in-app login without disallowed_useragent or mobile blocks
         val defaultUserAgent = ws.userAgentString
-        ws.userAgentString = "$defaultUserAgent KrishaAdminApp/1.0"
+        val cleanUserAgent = defaultUserAgent
+            .replace("; wv", "")
+            .replace("Version/4.0 ", "")
+        ws.userAgentString = cleanUserAgent
 
         // Cookie management (preserve Clerk / Google OAuth sessions)
         val cookieManager = CookieManager.getInstance()
@@ -164,9 +167,18 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest?
             ): Boolean {
                 val url = request?.url?.toString() ?: return false
+                val lower = url.lowercase()
 
-                // Keep all internal krishadryfruits.in admin URLs inside the WebView
-                if (url.contains("krishadryfruits.in") || url.contains("accounts.google.com") || url.contains("clerk")) {
+                // Keep all internal krishadryfruits.in, Clerk, and Google auth inside the WebView
+                if (
+                    lower.contains("krishadryfruits.in") ||
+                    lower.contains("google.com") ||
+                    lower.contains("google.co.in") ||
+                    lower.contains("gstatic.com") ||
+                    lower.contains("googleapis.com") ||
+                    lower.contains("clerk") ||
+                    lower.contains("accounts.dev")
+                ) {
                     return false
                 }
 

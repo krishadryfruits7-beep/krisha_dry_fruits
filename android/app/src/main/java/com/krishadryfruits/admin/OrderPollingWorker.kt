@@ -40,16 +40,24 @@ class OrderPollingWorker(
                 val lastSeenId = prefs.getString(KEY_LAST_ORDER_ID, null)
 
                 if (!orderId.isNullOrBlank() && orderId != lastSeenId) {
-                    val customer = latest.optJSONObject("customer")
-                    val customerName = customer?.optString("fullName") ?: "Customer"
-                    val total = latest.optDouble("total", 0.0)
+                    if (lastSeenId == null) {
+                        // First run on newly installed app: silently store the current latest order ID as baseline
+                        // Do NOT alert for existing past orders that were placed before app installation
+                        prefs.edit().putString(KEY_LAST_ORDER_ID, orderId).apply()
+                        Log.i(TAG, "Order baseline initialized to #$orderId without alerting")
+                    } else {
+                        // A genuine new order arrived after installation!
+                        val customer = latest.optJSONObject("customer")
+                        val customerName = customer?.optString("fullName") ?: "Customer"
+                        val total = latest.optDouble("total", 0.0)
 
-                    val title = "🚨 New Order: #$orderId"
-                    val body = "$customerName placed an order for ₹${total.toInt()}. Tap to view."
-                    val targetUrl = "https://krishadryfruits.in/admin?tab=orders&orderId=$orderId"
+                        val title = "🚨 New Order: #$orderId"
+                        val body = "$customerName placed an order for ₹${total.toInt()}. Tap to view."
+                        val targetUrl = "https://krishadryfruits.in/admin?tab=orders&orderId=$orderId"
 
-                    showLocalAlert(title, body, targetUrl, orderId)
-                    prefs.edit().putString(KEY_LAST_ORDER_ID, orderId).apply()
+                        showLocalAlert(title, body, targetUrl, orderId)
+                        prefs.edit().putString(KEY_LAST_ORDER_ID, orderId).apply()
+                    }
                 }
             }
             Result.success()

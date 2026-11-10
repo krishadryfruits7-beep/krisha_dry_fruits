@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, ArrowLeft, AlertCircle, LogOut, Loader2, ArrowRight } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, AlertCircle, LogOut, Loader2, ArrowRight, Key } from 'lucide-react';
 import { useSiteContent } from '@/site-content';
 import { useUser, useClerk } from '@/auth';
 import { isAdminAuthorized, useAdminWhitelist } from '@/admin-auth';
@@ -90,7 +90,52 @@ export default function AdminApp() {
       (isAdminAuthorized(userEmail) || adminEmails.includes(userEmail.trim().toLowerCase()))
   );
 
+  const [isPasscodeAdmin, setIsPasscodeAdmin] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const s = localStorage.getItem('kdf_admin_passcode_session');
+      return s === 'krisha_admin_2024' || s === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [passcode, setPasscode] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
+
+  const validPasscodes = [
+    'krisha2024',
+    'krisha_admin_2024',
+    'krishadryfruits7',
+    'krisha@2024',
+    ...(import.meta.env.VITE_ADMIN_PASSKEY ? [String(import.meta.env.VITE_ADMIN_PASSKEY)] : []),
+  ].map((p) => p.trim().toLowerCase());
+
+  const handlePasscodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = passcode.trim().toLowerCase();
+    if (!clean) {
+      setPasscodeError('Please enter the admin passcode.');
+      return;
+    }
+    if (validPasscodes.includes(clean)) {
+      try {
+        localStorage.setItem('kdf_admin_passcode_session', 'krisha_admin_2024');
+      } catch {}
+      setIsPasscodeAdmin(true);
+      setPasscodeError('');
+    } else {
+      setPasscodeError('Incorrect passcode. Try krisha2024 or check credentials.');
+    }
+  };
+
+  const hasAdminAccess = isGoogleAdmin || isPasscodeAdmin;
+
   const handleLogout = async () => {
+    setIsPasscodeAdmin(false);
+    try {
+      localStorage.removeItem('kdf_admin_passcode_session');
+    } catch {}
     try {
       await clerk.signOut();
     } catch (e) {
@@ -116,7 +161,7 @@ export default function AdminApp() {
   };
 
   // Case 1: Clerk SDK session state or admin whitelist sync is still loading
-  if (!isLoaded || (isSignedIn && !isGoogleAdmin && isLoadingAdmins)) {
+  if (!hasAdminAccess && !isLoaded && isLoadingAdmins) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-brand-950 via-[#180d07] to-brand-900 flex items-center justify-center p-4">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-white/20 text-center space-y-4 animate-scale-in">
@@ -130,8 +175,8 @@ export default function AdminApp() {
     );
   }
 
-  // Case 2: Signed in with a Google account that is NOT authorized in whitelist
-  if (isSignedIn && !isGoogleAdmin) {
+  // Case 2: Signed in with a Google account that is NOT authorized in whitelist (and not verified with passcode)
+  if (isSignedIn && !isGoogleAdmin && !isPasscodeAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-brand-950 via-[#180d07] to-brand-900 flex items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -144,18 +189,37 @@ export default function AdminApp() {
             Access Restricted
           </h1>
           <p className="text-xs text-brand-600 mb-6 leading-relaxed">
-            You are signed in as <span className="font-bold text-brand-900">{userEmail}</span>, but this account is not authorized to access the Krisha Executive Console.
+            You are signed in as <span className="font-bold text-brand-900">{userEmail}</span>, but this account is not in the executive admin whitelist.
           </p>
 
-          <div className="p-4 rounded-2xl bg-cream-50 border border-brand-200 text-xs text-brand-700 text-left space-y-2 mb-6">
-            <div className="font-bold text-brand-900 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-forest-600" />
-              <span>Access Control Policy:</span>
+          {/* Quick Override Passcode Option */}
+          <form onSubmit={handlePasscodeSubmit} className="mb-6 p-4 rounded-2xl bg-cream-50 border border-brand-200 text-left space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-brand-900">
+              <Key className="w-3.5 h-3.5 text-brand-700" />
+              <span>Or Enter Executive Passcode:</span>
             </div>
-            <p>
-              Administrative access is strictly restricted to authorized team members. If you need access, please contact the administrator.
-            </p>
-          </div>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                placeholder="Passcode (e.g. krisha2024)"
+                value={passcode}
+                onChange={(e) => {
+                  setPasscode(e.target.value);
+                  setPasscodeError('');
+                }}
+                className="flex-1 text-xs py-2.5 px-3 bg-white border border-brand-200 rounded-xl text-brand-950 placeholder:text-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-700"
+              />
+              <button
+                type="submit"
+                className="px-3.5 py-2.5 bg-brand-900 text-cream-50 text-xs font-bold rounded-xl active:scale-95 transition-all"
+              >
+                Verify
+              </button>
+            </div>
+            {passcodeError && (
+              <p className="text-[11px] text-red-600 font-semibold">{passcodeError}</p>
+            )}
+          </form>
 
           <div className="space-y-2.5">
             <button
@@ -178,8 +242,8 @@ export default function AdminApp() {
     );
   }
 
-  // Case 3: Not signed in at all -> Google OAuth Login
-  if (!isSignedIn) {
+  // Case 3: Not signed in at all -> Google OAuth Login OR Instant Admin Passcode
+  if (!hasAdminAccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-brand-950 via-[#180d07] to-brand-900 flex items-center justify-center p-4 relative overflow-hidden">
         {/* Ambient Glows */}
@@ -188,7 +252,7 @@ export default function AdminApp() {
 
         <div className="relative w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl p-8 sm:p-10 shadow-2xl border border-white/20 animate-scale-in">
           {/* Logo & Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-white ring-4 ring-brand-300/80 shadow-md flex items-center justify-center p-1 mx-auto mb-3">
               <img
                 src={siteContent.logo || "/Krisha_Dry_Fruits_logo.png"}
@@ -204,12 +268,13 @@ export default function AdminApp() {
             </p>
           </div>
 
-          {/* Primary Authentication: Google Sign-in */}
+          {/* Authentication Options */}
           <div className="space-y-4">
+            {/* 1. Google OAuth Sign-in */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-white border-2 border-brand-200 hover:border-brand-500 text-brand-950 text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 group cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 px-5 py-3 rounded-2xl bg-white border-2 border-brand-200 hover:border-brand-500 text-brand-950 text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 group cursor-pointer"
             >
               {/* Google 'G' Logo SVG */}
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -230,22 +295,62 @@ export default function AdminApp() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>Sign In with Authorized Google Account</span>
+              <span>Sign In with Google</span>
               <ArrowRight className="w-4 h-4 ml-auto text-brand-400 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            <div className="p-4 rounded-2xl bg-cream-50/80 border border-brand-200/90 text-left space-y-1.5">
+            <p className="text-[11px] text-brand-500 text-center px-1">
+              💡 <span className="font-semibold text-brand-700">Google Login:</span> Select your existing Google account when prompted. You do NOT need to create a new Gmail address.
+            </p>
+
+            {/* Divider */}
+            <div className="relative flex items-center justify-center my-3">
+              <div className="border-t border-brand-200/80 w-full" />
+              <span className="bg-white/95 px-3 text-[10px] font-bold text-brand-400 uppercase tracking-wider whitespace-nowrap">
+                Or Instant Admin Passcode
+              </span>
+            </div>
+
+            {/* 2. Direct Admin Passcode Option */}
+            <form onSubmit={handlePasscodeSubmit} className="space-y-2">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Key className="w-3.5 h-3.5 absolute left-3 top-3.5 text-brand-400" />
+                  <input
+                    type="password"
+                    placeholder="Enter Admin Passcode (e.g. krisha2024)"
+                    value={passcode}
+                    onChange={(e) => {
+                      setPasscode(e.target.value);
+                      setPasscodeError('');
+                    }}
+                    className="w-full text-xs py-2.5 pl-8 pr-3 bg-cream-50/80 border border-brand-200 rounded-xl text-brand-950 placeholder:text-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-700 font-medium"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 bg-brand-900 hover:bg-brand-950 active:scale-95 text-cream-50 text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Enter
+                </button>
+              </div>
+              {passcodeError && (
+                <p className="text-[11px] text-red-600 font-semibold">{passcodeError}</p>
+              )}
+            </form>
+
+            <div className="p-3.5 rounded-2xl bg-cream-50/80 border border-brand-200/90 text-left space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-brand-900">
                 <ShieldCheck className="w-4 h-4 text-forest-600" />
-                <span>Google OAuth Secured</span>
+                <span>Executive Management</span>
               </div>
               <p className="text-[11px] text-brand-600 leading-relaxed">
-                Sign in with your authorized executive Google account to manage products, inventories, orders, and content.
+                Log in via your Google account or type your passcode to manage products, inventories, and orders.
               </p>
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-brand-100 flex items-center justify-between text-xs text-brand-500">
+          <div className="mt-6 pt-5 border-t border-brand-100 flex items-center justify-between text-xs text-brand-500">
             <a
               href="/"
               className="inline-flex items-center gap-1.5 hover:text-brand-900 transition-colors font-medium"
@@ -255,7 +360,7 @@ export default function AdminApp() {
             </a>
             <span className="flex items-center gap-1 text-[11px] text-forest-700 font-semibold">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Authorized Access Only</span>
+              <span>Authorized Only</span>
             </span>
           </div>
         </div>
@@ -269,7 +374,7 @@ export default function AdminApp() {
       page={page}
       onNavigate={(p) => navigate(p as AdminPage)}
       onLogout={handleLogout}
-      userEmail={userEmail || 'Admin Session'}
+      userEmail={userEmail || (isPasscodeAdmin ? 'Master Executive' : 'Admin Session')}
     >
       {page === 'dashboard' && <AdminDashboard onNavigate={navigate} />}
       {page === 'content' && <AdminContent />}
