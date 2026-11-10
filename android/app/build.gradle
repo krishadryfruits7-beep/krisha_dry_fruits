@@ -51,9 +51,6 @@ dependencies {
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'androidx.work:work-runtime-ktx:2.10.0'
 
-    // Google Play Services Auth (Native system account picker)
-    implementation 'com.google.android.gms:play-services-auth:21.2.0'
-
     // Firebase BoM & Cloud Messaging
     implementation platform('com.google.firebase:firebase-bom:33.6.0')
     implementation 'com.google.firebase:firebase-messaging-ktx'

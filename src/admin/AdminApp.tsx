@@ -83,58 +83,14 @@ export default function AdminApp() {
     return () => window.removeEventListener('popstate', onPop);
   }, [page, selectedOrderId]);
 
-  const [nativeGoogleEmail, setNativeGoogleEmail] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      return localStorage.getItem('kdf_native_google_email');
-    } catch {
-      return null;
-    }
-  });
-
-  const [nativeAuthError, setNativeAuthError] = useState<string | null>(null);
-
-  // Listen for Native Google Account Chooser callbacks from Android
-  useEffect(() => {
-    (window as any).onNativeGoogleSignInSuccess = (data: { email: string; name?: string }) => {
-      if (data && data.email) {
-        const cleanEmail = data.email.trim().toLowerCase();
-        try {
-          localStorage.setItem('kdf_native_google_email', cleanEmail);
-        } catch {}
-        setNativeGoogleEmail(cleanEmail);
-        setNativeAuthError(null);
-      }
-    };
-
-    (window as any).onNativeGoogleSignInFailure = (errMsg?: string) => {
-      if (errMsg && errMsg !== 'CANCELED') {
-        setNativeAuthError(errMsg);
-      }
-    };
-
-    return () => {
-      delete (window as any).onNativeGoogleSignInSuccess;
-      delete (window as any).onNativeGoogleSignInFailure;
-    };
-  }, []);
-
-  const effectiveEmail = user?.primaryEmailAddress?.emailAddress || nativeGoogleEmail;
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
   const isGoogleAdmin = Boolean(
-    effectiveEmail &&
-      (isAdminAuthorized(effectiveEmail) || adminEmails.includes(effectiveEmail.trim().toLowerCase()))
+    isSignedIn &&
+      userEmail &&
+      (isAdminAuthorized(userEmail) || adminEmails.includes(userEmail.trim().toLowerCase()))
   );
 
   const handleLogout = async () => {
-    setNativeGoogleEmail(null);
-    try {
-      localStorage.removeItem('kdf_native_google_email');
-    } catch {}
-    if (typeof window !== 'undefined' && (window as any).AndroidGoogleAuth?.signOutGoogle) {
-      try {
-        (window as any).AndroidGoogleAuth.signOutGoogle();
-      } catch {}
-    }
     try {
       await clerk.signOut();
     } catch (e) {
@@ -143,21 +99,10 @@ export default function AdminApp() {
   };
 
   const handleGoogleSignIn = () => {
-    setNativeAuthError(null);
-    // 1. In Native Android App: Trigger the system Google Account Chooser
-    if (typeof window !== 'undefined' && (window as any).AndroidGoogleAuth?.requestGoogleSignIn) {
-      try {
-        (window as any).AndroidGoogleAuth.requestGoogleSignIn();
-        return;
-      } catch (e) {
-        console.warn('Native Google Auth call error, falling back to web OAuth', e);
-      }
-    }
-
-    // 2. In Desktop / Standard Web: Fall back to Clerk OAuth
     try {
       clerk.openSignIn({ fallbackRedirectUrl: window.location.href });
     } catch {
+      // Fallback redirect if popup is blocked
       window.location.href = '/admin';
     }
   };
@@ -170,8 +115,8 @@ export default function AdminApp() {
     }
   };
 
-  // Case 1: Session state or admin whitelist sync is still loading
-  if (!isGoogleAdmin && !isLoaded && isLoadingAdmins) {
+  // Case 1: Clerk SDK session state or admin whitelist sync is still loading
+  if (!isLoaded || (isSignedIn && !isGoogleAdmin && isLoadingAdmins)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-brand-950 via-[#180d07] to-brand-900 flex items-center justify-center p-4">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-white/20 text-center space-y-4 animate-scale-in">
@@ -186,7 +131,7 @@ export default function AdminApp() {
   }
 
   // Case 2: Signed in with a Google account that is NOT authorized in whitelist
-  if (effectiveEmail && !isGoogleAdmin) {
+  if (isSignedIn && !isGoogleAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-brand-950 via-[#180d07] to-brand-900 flex items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -199,7 +144,7 @@ export default function AdminApp() {
             Access Restricted
           </h1>
           <p className="text-xs text-brand-600 mb-6 leading-relaxed">
-            You selected Google account <span className="font-bold text-brand-900">{effectiveEmail}</span>, but this account is not in the executive admin whitelist.
+            You are signed in as <span className="font-bold text-brand-900">{userEmail}</span>, but this account is not authorized to access the Krisha Executive Console.
           </p>
 
           <div className="p-4 rounded-2xl bg-cream-50 border border-brand-200 text-xs text-brand-700 text-left space-y-2 mb-6">
@@ -208,14 +153,14 @@ export default function AdminApp() {
               <span>Access Control Policy:</span>
             </div>
             <p>
-              Administrative access is strictly restricted to authorized team Google accounts. Please switch to an authorized account.
+              Administrative access is strictly restricted to authorized team members. If you need access, please contact the administrator.
             </p>
           </div>
 
           <div className="space-y-2.5">
             <button
               onClick={handleLogout}
-              className="w-full btn-primary py-3 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg active:scale-95 transition-all"
+              className="w-full btn-primary py-2.5 text-xs font-semibold flex items-center justify-center gap-2"
             >
               <LogOut className="w-4 h-4" />
               <span>Switch Google Account</span>
@@ -233,8 +178,8 @@ export default function AdminApp() {
     );
   }
 
-  // Case 3: Not signed in at all -> Google Account Chooser Login
-  if (!isGoogleAdmin) {
+  // Case 3: Not signed in at all -> Google OAuth Login
+  if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-brand-950 via-[#180d07] to-brand-900 flex items-center justify-center p-4 relative overflow-hidden">
         {/* Ambient Glows */}
@@ -259,12 +204,12 @@ export default function AdminApp() {
             </p>
           </div>
 
-          {/* Primary Authentication: Native Google Account Picker */}
+          {/* Primary Authentication: Google Sign-in */}
           <div className="space-y-4">
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border-2 border-brand-200 hover:border-brand-500 text-brand-950 text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 group cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-white border-2 border-brand-200 hover:border-brand-500 text-brand-950 text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 group cursor-pointer"
             >
               {/* Google 'G' Logo SVG */}
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -285,23 +230,17 @@ export default function AdminApp() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>Sign In with Google</span>
+              <span>Sign In with Authorized Google Account</span>
               <ArrowRight className="w-4 h-4 ml-auto text-brand-400 group-hover:translate-x-1 transition-transform" />
             </button>
-
-            {nativeAuthError && (
-              <p className="text-[11px] text-red-600 font-semibold text-center">
-                {nativeAuthError}
-              </p>
-            )}
 
             <div className="p-4 rounded-2xl bg-cream-50/80 border border-brand-200/90 text-left space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-bold text-brand-900">
                 <ShieldCheck className="w-4 h-4 text-forest-600" />
-                <span>One-Tap Google Authentication</span>
+                <span>Google OAuth Secured</span>
               </div>
               <p className="text-[11px] text-brand-600 leading-relaxed">
-                Choose any authorized Google account on this device to access products, orders, and content management.
+                Sign in with your authorized executive Google account to manage products, inventories, orders, and content.
               </p>
             </div>
           </div>
@@ -330,7 +269,7 @@ export default function AdminApp() {
       page={page}
       onNavigate={(p) => navigate(p as AdminPage)}
       onLogout={handleLogout}
-      userEmail={effectiveEmail || 'Admin Session'}
+      userEmail={userEmail || 'Admin Session'}
     >
       {page === 'dashboard' && <AdminDashboard onNavigate={navigate} />}
       {page === 'content' && <AdminContent />}
