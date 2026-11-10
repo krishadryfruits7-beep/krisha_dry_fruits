@@ -51,6 +51,13 @@ export const handler: Handler = async (event) => {
         body.placedAt = new Date();
       }
 
+      if (body.orderId) {
+        const existing = await Order.findOne({ orderId: body.orderId }).lean();
+        if (existing) {
+          return { statusCode: 200, headers, body: JSON.stringify(existing) };
+        }
+      }
+
       const order = await Order.create(body);
       return { statusCode: 201, headers, body: JSON.stringify(order) };
     }
@@ -58,11 +65,12 @@ export const handler: Handler = async (event) => {
     if (event.httpMethod === 'GET') {
       const email = event.queryStringParameters?.email || event.queryStringParameters?.search;
       if (email && email.trim()) {
-        const cleanEmail = email.trim();
+        const cleanSearch = email.trim();
         const orders = await Order.find({
           $or: [
-            { 'customer.email': { $regex: cleanEmail, $options: 'i' } },
-            { orderId: { $regex: cleanEmail, $options: 'i' } },
+            { 'customer.email': { $regex: cleanSearch, $options: 'i' } },
+            { 'customer.phone': { $regex: cleanSearch, $options: 'i' } },
+            { orderId: { $regex: cleanSearch, $options: 'i' } },
           ],
         })
           .sort({ createdAt: -1 })

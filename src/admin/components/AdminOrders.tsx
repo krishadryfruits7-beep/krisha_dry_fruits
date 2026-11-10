@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Search, Filter, ChevronLeft, ChevronRight, X, Eye, MapPin, ExternalLink, Phone } from 'lucide-react';
-import { adminApi } from '@/api';
+import { adminApi, api } from '@/api';
 import { formatPrice } from '@/data';
 import { getCustomerOrders } from '@/orders-storage';
 
@@ -33,15 +33,23 @@ export default function AdminOrders({ onViewOrder }: { onViewOrder: (id: string)
         const serverList = Array.isArray(data?.orders) ? data.orders : [];
         const local = getCustomerOrders();
         const map = new Map<string, any>();
+        const serverIds = new Set<string>();
 
         serverList.forEach((o: any) => {
           const id = o.orderId || o._id || o.id;
-          if (id) map.set(id, o);
+          if (id) {
+            map.set(id, o);
+            serverIds.add(id);
+          }
         });
 
         local.forEach((o: any) => {
           const id = o.orderId || o._id || o.id;
           if (id) {
+            if (!serverIds.has(id)) {
+              // Automatically push stranded local order to MongoDB so all other devices see it
+              api.orders.create(o).catch(() => {});
+            }
             const existing = map.get(id) || {};
             map.set(id, { ...existing, ...o });
           }

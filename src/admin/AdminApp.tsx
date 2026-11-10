@@ -17,7 +17,7 @@ export default function AdminApp() {
   // Always call all hooks unconditionally at top level
   const { isSignedIn, user, isLoaded } = useUser();
   const clerk = useClerk();
-  useAdminWhitelist();
+  const { emails: adminEmails, isLoading: isLoadingAdmins } = useAdminWhitelist();
 
   const getInitialAdminState = () => {
     if (typeof window === 'undefined') return { page: 'dashboard' as AdminPage, orderId: null };
@@ -83,7 +83,11 @@ export default function AdminApp() {
   }, [page, selectedOrderId]);
 
   const userEmail = user?.primaryEmailAddress?.emailAddress;
-  const isGoogleAdmin = Boolean(isSignedIn && userEmail && isAdminAuthorized(userEmail));
+  const isGoogleAdmin = Boolean(
+    isSignedIn &&
+      userEmail &&
+      (isAdminAuthorized(userEmail) || adminEmails.includes(userEmail.trim().toLowerCase()))
+  );
 
   const handleLogout = async () => {
     try {
@@ -110,8 +114,8 @@ export default function AdminApp() {
     }
   };
 
-  // Case 1: Clerk SDK session state is still loading
-  if (!isLoaded) {
+  // Case 1: Clerk SDK session state or admin whitelist sync is still loading
+  if (!isLoaded || (isSignedIn && !isGoogleAdmin && isLoadingAdmins)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-brand-950 via-[#180d07] to-brand-900 flex items-center justify-center p-4">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-white/20 text-center space-y-4 animate-scale-in">

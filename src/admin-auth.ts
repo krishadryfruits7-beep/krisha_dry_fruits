@@ -134,9 +134,20 @@ export async function removeAdminEmail(email: string): Promise<{ success: boolea
 
 export function useAdminWhitelist() {
   const [emails, setEmails] = useState<string[]>(getAdminWhitelist);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    fetchAndSyncAdmins();
+    let isMounted = true;
+    fetchAndSyncAdmins()
+      .then((list) => {
+        if (isMounted) {
+          setEmails(list);
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setIsLoading(false);
+      });
 
     const handler = (e: Event) => {
       const custom = e as CustomEvent<string[]>;
@@ -149,6 +160,7 @@ export function useAdminWhitelist() {
     window.addEventListener(ADMIN_EVENT, handler);
     window.addEventListener('storage', handler);
     return () => {
+      isMounted = false;
       window.removeEventListener(ADMIN_EVENT, handler);
       window.removeEventListener('storage', handler);
     };
@@ -156,6 +168,7 @@ export function useAdminWhitelist() {
 
   return {
     emails,
+    isLoading,
     addAdmin: addAdminEmail,
     removeAdmin: removeAdminEmail,
     permanentAdmins: DEFAULT_PERMANENT_ADMIN_EMAILS,

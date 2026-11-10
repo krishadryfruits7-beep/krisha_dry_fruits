@@ -87,22 +87,28 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
     setLookingUp(true);
     setLookupError(null);
     try {
-      if (q.includes('@')) {
-        const res = await api.orders.listByUser(q);
-        if (Array.isArray(res?.orders) && res.orders.length > 0) {
-          setServerOrders((prev) => {
-            const map = new Map<string, any>();
-            [...prev, ...res.orders].forEach((o: any) => {
-              const id = o.orderId || o._id;
-              if (id) map.set(id, o);
+      // First try listing by email or phone
+      if (q.includes('@') || /^\+?\d[\d\s-]{6,}$/.test(q)) {
+        try {
+          const res = await api.orders.listByUser(q);
+          if (Array.isArray(res?.orders) && res.orders.length > 0) {
+            setServerOrders((prev) => {
+              const map = new Map<string, any>();
+              [...prev, ...res.orders].forEach((o: any) => {
+                const id = o.orderId || o._id;
+                if (id) map.set(id, o);
+              });
+              return Array.from(map.values());
             });
-            return Array.from(map.values());
-          });
-          res.orders.forEach((o: any) => saveCustomerOrder(o));
-          setExpandedId(res.orders[0].orderId || res.orders[0]._id);
-          return;
-        }
-      } else {
+            res.orders.forEach((o: any) => saveCustomerOrder(o));
+            setExpandedId(res.orders[0].orderId || res.orders[0]._id);
+            return;
+          }
+        } catch {}
+      }
+
+      // If not found or if query is an order number, try direct order get
+      try {
         const res = await api.orders.get(q);
         if (res && (res.orderId || res._id)) {
           setServerOrders((prev) => {
@@ -117,8 +123,25 @@ export default function MyOrders({ onBack, onShop }: MyOrdersProps) {
           setExpandedId(res.orderId || res._id);
           return;
         }
+      } catch {}
+
+      // Fallback: try listByUser anyway
+      const fallbackRes = await api.orders.listByUser(q);
+      if (Array.isArray(fallbackRes?.orders) && fallbackRes.orders.length > 0) {
+        setServerOrders((prev) => {
+          const map = new Map<string, any>();
+          [...prev, ...fallbackRes.orders].forEach((o: any) => {
+            const id = o.orderId || o._id;
+            if (id) map.set(id, o);
+          });
+          return Array.from(map.values());
+        });
+        fallbackRes.orders.forEach((o: any) => saveCustomerOrder(o));
+        setExpandedId(fallbackRes.orders[0].orderId || fallbackRes.orders[0]._id);
+        return;
       }
-      setLookupError(`No order found matching "${q}". Please check the Order ID or email.`);
+
+      setLookupError(`No order found matching "${q}". Please check the Order ID, phone, or email.`);
     } catch {
       setLookupError(`Could not find an order matching "${q}". Please check the order number.`);
     } finally {

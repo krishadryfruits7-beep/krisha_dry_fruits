@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ShoppingBag, Truck, CheckCircle, IndianRupee, Clock, ArrowRight, Package, TrendingUp, MapPin } from 'lucide-react';
-import { adminApi } from '@/api';
+import { adminApi, api } from '@/api';
 import { formatPrice } from '@/data';
 import { getCustomerOrders } from '@/orders-storage';
 import type { AdminPage } from '../AdminApp';
@@ -35,19 +35,26 @@ export default function AdminDashboard({ onNavigate }: { onNavigate: (p: AdminPa
       .then(([serverStats, serverOrdersRes]) => {
         const local = getCustomerOrders();
         const map = new Map<string, any>();
+        const serverIds = new Set<string>();
 
         // 1. Ingest server orders if available
         if (serverOrdersRes && Array.isArray(serverOrdersRes.orders)) {
           serverOrdersRes.orders.forEach((o: any) => {
             const id = o.orderId || o._id || o.id;
-            if (id) map.set(id, o);
+            if (id) {
+              map.set(id, o);
+              serverIds.add(id);
+            }
           });
         }
 
-        // 2. Ingest local orders (takes precedence or augments)
+        // 2. Ingest local orders and push any missing ones to MongoDB
         local.forEach((o: any) => {
           const id = o.orderId || o._id || o.id;
           if (id) {
+            if (!serverIds.has(id)) {
+              api.orders.create(o).catch(() => {});
+            }
             const existing = map.get(id) || {};
             map.set(id, { ...existing, ...o });
           }

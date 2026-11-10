@@ -113,8 +113,31 @@ export function deleteCustomerOrder(orderId: string): void {
 
 let isSyncing = false;
 /**
+ * Pushes any locally stored orders that are missing from MongoDB Atlas so they become visible on all devices.
+ */
+export async function pushMissingLocalOrdersToServer(serverOrderIds?: Set<string>): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const local = getCustomerOrders();
+  if (local.length === 0) return;
+
+  const existingIds = serverOrderIds || new Set<string>();
+  for (const lo of local) {
+    const id = lo.orderId || (lo as any)._id;
+    if (id && !existingIds.has(id)) {
+      try {
+        await api.orders.create(lo);
+        existingIds.add(id);
+      } catch {
+        // Will retry on next sync
+      }
+    }
+  }
+}
+
+/**
  * Automatically checks MongoDB backend for each local order to sync live updates
- * (such as admin cancellations, courier dispatches, or deliveries).
+ * (such as admin cancellations, courier dispatches, or deliveries), and auto-heals
+ * any orders that only exist in local storage by uploading them to MongoDB.
  */
 export async function syncOrdersWithServer(): Promise<OrderDetails[]> {
   if (typeof window === 'undefined' || isSyncing) return getCustomerOrders();
@@ -132,7 +155,20 @@ export async function syncOrdersWithServer(): Promise<OrderDetails[]> {
         if (!orderId) return;
 
         try {
-          const res = await api.orders.get(orderId);
+          let res: any = null;
+          try {
+            res = await api.orders.get(orderId);
+          } catch (fetchErr: any) {
+            const isNotFound =
+              fetchErr?.message?.includes('Not found') ||
+              fetchErr?.message?.includes('404');
+            if (isNotFound) {
+              try {
+                res = await api.orders.create(localOrder);
+              } catch {}
+            }
+          }
+
           if (res && res.status && res.status !== localOrder.status) {
             updated[index] = {
               ...localOrder,

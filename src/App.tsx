@@ -297,11 +297,22 @@ function App() {
     window.history.pushState({ page: 'confirmation', orderId: o.orderId }, '', `/confirmation?orderId=${o.orderId}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    try {
-      await api.orders.create(o);
-    } catch (err) {
-      console.error('Failed to sync order to server:', err);
-    }
+    // Sync to MongoDB Atlas with automatic retries so orders are NEVER lost or stuck on one device
+    const syncWithRetry = async (attempts = 3, delay = 1000): Promise<void> => {
+      for (let i = 0; i < attempts; i++) {
+        try {
+          await api.orders.create(o);
+          return;
+        } catch (err) {
+          if (i === attempts - 1) {
+            console.error('Failed to sync order to server after retries:', err);
+          } else {
+            await new Promise((r) => setTimeout(r, delay * Math.pow(2, i)));
+          }
+        }
+      }
+    };
+    syncWithRetry().catch(() => {});
   }, []);
 
   // Close cart on page change
