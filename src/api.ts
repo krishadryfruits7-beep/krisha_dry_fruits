@@ -124,4 +124,19 @@ export const adminApi = {
       headers: adminHeaders(),
       body: JSON.stringify({ data: dataUrl, folder }),
     }),
+  database: {
+    stats: () => req<any>('/admin-database?action=stats', { headers: adminHeaders() }),
+    exportOrders: () => req<any>('/admin-database?action=export-orders', { headers: adminHeaders() }),
+    purgeOrders: (params: { criteria: 'cancelled' | 'older_than' | 'test'; days?: number }) =>
+      req<any>('/admin-database?action=purge-orders', {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify(params),
+      }),
+    deleteOrder: (id: string) =>
+      req<any>(`/admin-database?action=delete-order&id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: adminHeaders(),
+      }),
+  },
 };

@@ -46,23 +46,40 @@ export default function CategoryShowcase({
               <button
                 key={item.id}
                 onClick={() => handleCardClick(item)}
-                className={`group relative rounded-2xl sm:rounded-3xl overflow-hidden border transition-all duration-300 text-left p-0 cursor-pointer shadow-xs hover:shadow-lg hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-[#8C6339] ${
+                className={`group relative flex flex-col rounded-2xl sm:rounded-3xl overflow-hidden border transition-all duration-300 text-left p-0 cursor-pointer shadow-xs hover:shadow-lg hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-[#8C6339] bg-white ${
                   isSelected
                     ? 'border-[#8C6339] ring-2 ring-[#8C6339]/40 shadow-md'
-                    : 'border-[#E7DEC8]/90 hover:border-[#D9C8B5] bg-[#F5EBE1]'
+                    : 'border-[#E7DEC8]/90 hover:border-[#D9C8B5]'
                 } ${isLastOnMobileOdd ? 'col-span-2 sm:col-span-1' : ''}`}
                 aria-label={`Explore ${item.title}`}
               >
-                {/* Mockup HD card visual matching reference design 100% */}
-                <div className="relative w-full aspect-[2.35/1] overflow-hidden bg-[#F5EBE1]">
+                {/* Photo container */}
+                <div className="relative w-full aspect-[16/10] overflow-hidden bg-[#F5EBE1]">
                   <img
                     src={item.image}
                     alt={item.title}
-                    className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                    className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                     loading="lazy"
                   />
-                  {/* Subtle hover sheen */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+                </div>
+
+                {/* Clean, dedicated card info panel (always 100% legible) */}
+                <div className="p-3 sm:p-3.5 bg-white flex flex-col justify-between flex-1 border-t border-[#F0E6D8]">
+                  <div>
+                    <h3 className="font-serif text-xs sm:text-sm font-bold text-[#2A1D13] leading-snug line-clamp-1 group-hover:text-[#8C6339] transition-colors">
+                      {item.title}
+                    </h3>
+                    {item.subtitle && (
+                      <p className="text-[10px] sm:text-[11px] text-[#7A6B5D] mt-0.5 line-clamp-1 font-normal">
+                        {item.subtitle}
+                      </p>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-[#8C6339] group-hover:translate-x-0.5 transition-transform">
+                    <span>Shop Collection</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </div>
                 </div>
               </button>
             );

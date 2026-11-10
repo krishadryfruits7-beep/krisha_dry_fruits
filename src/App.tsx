@@ -113,11 +113,25 @@ function App() {
 
   const viewProduct = useCallback((product: Product) => {
     setSelectedProduct(product);
-    setPage('product');
     const pid = (product as any)._id || product.id;
-    window.history.pushState({ page: 'product', productId: pid }, '', `/product?id=${pid}`);
+    const from = page === 'product' ? (window.history.state?.fromPage || 'products') : page;
+    setPage('product');
+    window.history.pushState(
+      { page: 'product', productId: pid, fromPage: from },
+      '',
+      `/product?id=${pid}`
+    );
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [page]);
+
+  const handleProductBack = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back();
+    } else {
+      const from = (window.history.state?.fromPage as Page) || 'products';
+      navigate(from);
+    }
+  }, [navigate]);
 
   // Return from guest sign-in rehydration
   useEffect(() => {
@@ -745,7 +759,7 @@ function App() {
               product={selectedProduct}
               allProducts={products}
               onSelectProduct={viewProduct}
-              onBack={() => navigate('products')}
+              onBack={handleProductBack}
               onNavigate={navigate}
               onOpenCart={() => setCartOpen(true)}
             />

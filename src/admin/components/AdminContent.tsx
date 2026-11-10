@@ -146,6 +146,70 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
     linkText: '',
   });
 
+  // Showcase Card Modal State
+  const [showcaseModalOpen, setShowcaseModalOpen] = useState(false);
+  const [editingShowcaseIndex, setEditingShowcaseIndex] = useState<number | null>(null);
+  const [showcaseForm, setShowcaseForm] = useState<CategoryBannerItem>({
+    id: '',
+    categoryId: 'nuts',
+    title: '',
+    subtitle: '',
+    image: '',
+  });
+
+  const openAddShowcaseModal = () => {
+    setEditingShowcaseIndex(null);
+    setShowcaseForm({
+      id: `showcase-${Date.now()}`,
+      categoryId: 'nuts',
+      title: '',
+      subtitle: '',
+      image: '',
+    });
+    setShowcaseModalOpen(true);
+  };
+
+  const openEditShowcaseModal = (index: number) => {
+    const list = content.categoryBanners || DEFAULT_CATEGORY_BANNERS;
+    const item = list[index];
+    if (!item) return;
+    setEditingShowcaseIndex(index);
+    setShowcaseForm({ ...item });
+    setShowcaseModalOpen(true);
+  };
+
+  const saveShowcaseModal = () => {
+    if (!showcaseForm.title.trim()) {
+      showToast('Please enter a title for the showcase card.', 'error');
+      return;
+    }
+    if (!showcaseForm.image.trim()) {
+      showToast('Please upload or provide an image for the showcase card.', 'error');
+      return;
+    }
+
+    setContent((prev) => {
+      const list = [...(prev.categoryBanners || DEFAULT_CATEGORY_BANNERS)];
+      if (editingShowcaseIndex !== null && editingShowcaseIndex >= 0 && editingShowcaseIndex < list.length) {
+        list[editingShowcaseIndex] = showcaseForm;
+      } else {
+        list.push(showcaseForm);
+      }
+      const updated = { ...prev, categoryBanners: list };
+      saveSiteContent(updated);
+      adminApi.content.update(updated).catch(() => {});
+      return updated;
+    });
+
+    setShowcaseModalOpen(false);
+    showToast(
+      editingShowcaseIndex !== null
+        ? 'Showcase card updated and published live!'
+        : 'New showcase card added and published live!',
+      'success'
+    );
+  };
+
   // Modern In-App Toast Notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -845,21 +909,7 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
   };
 
   const addCategoryCard = () => {
-    setContent((prev) => {
-      const list = [...(prev.categoryBanners || DEFAULT_CATEGORY_BANNERS)];
-      const newCard: CategoryBannerItem = {
-        id: `showcase-${Date.now()}`,
-        categoryId: 'nuts',
-        title: 'New Showcase Category',
-        subtitle: 'Collection subtitle',
-        image: 'https://images.pexels.com/photos/12326584/pexels-photo-12326584.jpeg?auto=compress&cs=tinysrgb&h=600&w=1000',
-      };
-      const updated = { ...prev, categoryBanners: [...list, newCard] };
-      saveSiteContent(updated);
-      adminApi.content.update(updated).catch(() => {});
-      return updated;
-    });
-    showToast('New showcase card added and saved.', 'success');
+    openAddShowcaseModal();
   };
 
   const removeCategoryCard = (index: number) => {
@@ -956,7 +1006,6 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
           { id: 'hero', label: 'Announcement & Hero', icon: Sparkles },
           { id: 'categories', label: 'Front Showcase Cards', icon: Layers },
           { id: 'features', label: '4 Trust Features', icon: Award },
-          { id: 'locations', label: 'Location Cashew Banners', icon: MapPin },
           { id: 'contact', label: 'Store Location & Contact', icon: Store },
           { id: 'delivery', label: 'Delivery & KM Pricing', icon: Truck },
           { id: 'social', label: 'Footer & Social Handles', icon: Share2 },
@@ -1380,6 +1429,14 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                     </button>
                     <button
                       type="button"
+                      onClick={() => openEditShowcaseModal(idx)}
+                      className="p-1 rounded text-brand-700 hover:bg-cream-200 transition-colors ml-1"
+                      title="Edit this card in pop-up modal"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => removeCategoryCard(idx)}
                       className="p-1 rounded text-red-500 hover:bg-red-50 transition-colors ml-1"
                       title="Delete this showcase card"
@@ -1389,22 +1446,30 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                   </div>
                 </div>
 
-                {/* Live Card Preview Box */}
-                <div className="relative rounded-xl overflow-hidden aspect-[2.35/1] bg-cream-200 border border-brand-200 shadow-inner">
-                  {card.image ? (
-                    <img
-                      src={card.image}
-                      alt={card.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-brand-400">
-                      No Image Set
+                {/* Live Card Preview Box matching Storefront UI */}
+                <div className="relative rounded-2xl overflow-hidden border border-brand-200 bg-white shadow-xs">
+                  <div className="relative w-full aspect-[16/10] overflow-hidden bg-cream-200">
+                    {card.image ? (
+                      <img
+                        src={card.image}
+                        alt={card.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-brand-400">
+                        No Image Set
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 bg-white border-t border-brand-100 flex flex-col justify-between">
+                    <div>
+                      <p className="font-serif text-sm font-bold text-brand-950 leading-tight truncate">{card.title || 'Card Title'}</p>
+                      <p className="text-[11px] text-brand-600 truncate mt-0.5">{card.subtitle || 'Card Subtitle'}</p>
                     </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-3 text-white">
-                    <p className="font-serif text-sm font-bold leading-tight">{card.title}</p>
-                    <p className="text-[10px] text-cream-200 truncate">{card.subtitle}</p>
+                    <div className="mt-2 text-[10px] font-semibold text-brand-800 flex items-center gap-1">
+                      <span>Shop Collection</span>
+                      <span>→</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1585,188 +1650,7 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
         </div>
       )}
 
-      {/* TAB 3: LOCATION CASHEW BANNERS */}
-      {activeTab === 'locations' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-luxury border border-brand-200/60 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-brand-100 gap-3">
-            <div>
-              <h2 className="font-serif text-lg font-bold text-brand-950">
-                Location-wise Cashew Cards & Sourcing Banners
-              </h2>
-              <p className="text-xs text-brand-600 mt-0.5">
-                Manage the sourcing regions showcased to customers. Each banner features regional orchard photography, harvest notes, and direct links.
-              </p>
-            </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={openAddBanner}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-forest-700 hover:bg-forest-800 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
-                title="Open pop-up to configure and add a new location banner"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Location Banner</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Poster Dimensions Recommendation Callout */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50/90 to-cream-100/70 border border-amber-200/80 text-xs text-amber-950 space-y-2.5 shadow-xs">
-            <div className="flex items-center gap-2 font-bold text-brand-950 text-sm">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <span>Recommended Banner Poster Size & Display Quality</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
-              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/70">
-                <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-0.5">Recommended Dimensions</span>
-                <span className="font-mono text-sm font-bold text-brand-950">1200 × 500 px</span>
-                <p className="text-[11px] text-brand-600 mt-1">Wide landscape format (approx 2.4:1 ratio, min 1000px width).</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/70">
-                <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-0.5">Mobile & Desktop Safe</span>
-                <span className="text-xs font-bold text-forest-800">Zero Distortion / No Shrinking</span>
-                <p className="text-[11px] text-brand-600 mt-1">Displays via responsive object-cover without squishing pixels or warping on any phone or screen.</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/70">
-                <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wider block mb-0.5">Composition Advice</span>
-                <span className="text-xs font-bold text-brand-900">Landscape Cashew Harvests</span>
-                <p className="text-[11px] text-brand-600 mt-1">Orchards, drying yards, or scenic plantations. High-contrast scrims ensure clear readability.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Empty State when no banners exist */}
-          {content.locationBanners.length === 0 ? (
-            <div className="p-8 sm:p-12 rounded-3xl border-2 border-dashed border-brand-200 bg-cream-50/50 text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
-                <MapPin className="w-7 h-7" />
-              </div>
-              <div className="max-w-md mx-auto">
-                <h3 className="font-serif text-lg font-bold text-brand-950">
-                  No Regional Sourcing Banners
-                </h3>
-                <p className="text-xs text-brand-600 mt-1">
-                  The &ldquo;Coastal Harvest & Sourcing Regions&rdquo; banner section is completely hidden from visitors when 0 banners exist. Click below to add a regional harvest banner.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={openAddBanner}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-forest-700 hover:bg-forest-800 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add First Location Banner</span>
-              </button>
-            </div>
-          ) : (
-            /* Banners List with Reordering & Pop-up Edit Controls */
-            <div className="space-y-3.5">
-              {content.locationBanners.map((card, idx) => (
-                <div
-                  key={card.id || idx}
-                  className="rounded-2xl border border-brand-200 p-4 sm:p-5 bg-cream-50/70 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 group hover:border-brand-400 hover:bg-cream-50 transition-all shadow-xs"
-                >
-                  {/* Thumbnail & Text Info */}
-                  <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
-                    <div className="w-24 sm:w-32 h-16 sm:h-20 rounded-xl overflow-hidden bg-brand-900 shrink-0 border border-brand-200 shadow-2xs relative">
-                      {card.image ? (
-                        <img
-                          src={card.image}
-                          alt={card.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-brand-300 text-[10px]">
-                          No Photo
-                        </div>
-                      )}
-                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-black/70 text-white font-mono text-[9px] font-bold">
-                        #{idx + 1}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1 min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs sm:text-sm font-bold text-brand-950 truncate">
-                          {card.title || 'Untitled Location Banner'}
-                        </span>
-                        {card.locationKey && (
-                          <span className="text-[10px] font-bold text-forest-800 bg-forest-50 px-2 py-0.5 rounded-full border border-forest-200">
-                            📍 {card.locationKey}
-                          </span>
-                        )}
-                        {card.tag && (
-                          <span className="text-[10px] text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full font-medium">
-                            {card.tag}
-                          </span>
-                        )}
-                      </div>
-                      {card.subtitle && (
-                        <p className="text-xs text-brand-600 line-clamp-1">
-                          {card.subtitle}
-                        </p>
-                      )}
-                      {card.linkText && (
-                        <p className="text-[11px] font-medium text-forest-700">
-                          Button: &ldquo;{card.linkText}&rdquo;
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions: Reorder, Edit Pop-up, Delete */}
-                  <div className="flex items-center gap-2 self-end md:self-center shrink-0">
-                    <div className="flex items-center rounded-xl bg-white border border-brand-200 p-0.5 shadow-2xs">
-                      <button
-                        type="button"
-                        onClick={() => moveLocationCardUp(idx)}
-                        disabled={idx === 0}
-                        className="p-1.5 rounded-lg hover:bg-cream-100 disabled:opacity-25 disabled:pointer-events-none text-brand-700 transition-colors"
-                        title="Move banner earlier"
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveLocationCardDown(idx)}
-                        disabled={idx === content.locationBanners.length - 1}
-                        className="p-1.5 rounded-lg hover:bg-cream-100 disabled:opacity-25 disabled:pointer-events-none text-brand-700 transition-colors"
-                        title="Move banner later"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => openEditBanner(idx)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-forest-50 border border-brand-200 hover:border-forest-300 text-brand-900 hover:text-forest-800 text-xs font-bold transition-all shadow-2xs cursor-pointer"
-                      title="Edit this banner in pop-up modal"
-                    >
-                      <Pencil className="w-3.5 h-3.5 text-forest-700" />
-                      <span>Edit Banner</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => removeLocationCard(idx)}
-                      className="p-2 rounded-xl text-brand-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
-                      title="Remove this location banner"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex justify-end pt-4 border-t border-brand-100">
-            {renderSaveButton('Save Location Cards')}
-          </div>
-        </div>
-      )}
 
       {/* TAB 4: STORE LOCATION & CONTACT INFO */}
       {activeTab === 'contact' && (
@@ -1839,6 +1723,24 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                   Clear Location
                 </button>
 
+                {/* 1-Click Interactive Map Spot Picker */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPickedSpot({
+                      lat: content.contact.latitude || '13.020102',
+                      lng: content.contact.longitude || '77.547321',
+                      address: content.contact.address || '',
+                    });
+                    setMapPickerOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-forest-800 hover:bg-forest-900 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  title="Pick and spot store location on interactive map"
+                >
+                  <Map className="w-3.5 h-3.5" />
+                  <span>Spot on Interactive Map</span>
+                </button>
+
                 {/* 1-Click GPS Auto-Detect Button */}
                 <button
                   type="button"
@@ -1886,7 +1788,7 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                   value={placeSearchQuery}
                   onChange={(e) => setPlaceSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearchPlace()}
-                  placeholder="Type shop name, street, city, landmark or pincode (e.g. Krisha Dry Fruits, Connaught Place Delhi, Margao Goa)..."
+                  placeholder="Type shop name, street, city, landmark or pincode (e.g. Krisha Dry Fruits, Yeshwanthpur Bangalore)..."
                   className="input-field text-xs sm:text-sm flex-1"
                 />
                 <button
@@ -1908,7 +1810,7 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
               </p>
             </div>
 
-            {/* Map Pinning Grid: Coordinates + Smart Paste + Interactive Embed */}
+            {/* Map Pinning Grid: Coordinates + Clean Navigation URL + Interactive Embed */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
               {/* Left Column: Pin Inputs */}
@@ -1918,124 +1820,65 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold text-brand-900 block mb-1">
-                      Latitude (e.g. 15.273612)
+                      Latitude (e.g. 13.020102)
                     </label>
                     <input
                       type="text"
                       value={content.contact.latitude || ''}
                       onChange={(e) => handleCoordinatesChange(e.target.value, content.contact.longitude || '')}
                       className="input-field font-mono text-xs"
-                      placeholder="e.g. 15.273612"
+                      placeholder="e.g. 13.020102"
                     />
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-brand-900 block mb-1">
-                      Longitude (e.g. 73.958215)
+                      Longitude (e.g. 77.547321)
                     </label>
                     <input
                       type="text"
                       value={content.contact.longitude || ''}
                       onChange={(e) => handleCoordinatesChange(content.contact.latitude || '', e.target.value)}
                       className="input-field font-mono text-xs"
-                      placeholder="e.g. 73.958215"
+                      placeholder="e.g. 77.547321"
                     />
                   </div>
                 </div>
 
-                {/* Smart Link / Coordinates / Embed Paste */}
+                {/* Google Maps Navigation & Share URL */}
                 <div>
-                  <label className="text-xs font-bold text-brand-900 block mb-1">
-                    Or Paste Any Google Maps Link, Share URL, Embed Code, or Coordinates
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={pastedLink}
-                      onChange={(e) => handleParseMapsLinkOrCoords(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAutoResolveAndFillLocation(pastedLink)}
-                      className="input-field font-mono text-xs flex-1"
-                      placeholder="Paste e.g. https://maps.app.goo.gl/... or 15.2736, 73.9582..."
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (pastedLink.trim()) {
-                          handleAutoResolveAndFillLocation(pastedLink.trim());
-                        }
-                      }}
-                      disabled={searchingPlace || !pastedLink.trim()}
-                      className="px-3 py-2 bg-brand-800 hover:bg-brand-900 text-white rounded-xl text-xs font-semibold shrink-0 transition-colors disabled:opacity-50"
-                    >
-                      Pin Link
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPickedSpot({
-                          lat: content.contact.latitude || '13.020102',
-                          lng: content.contact.longitude || '77.547321',
-                          address: content.contact.address || '',
-                        });
-                        setMapPickerOpen(true);
-                      }}
-                      className="px-3.5 py-2 bg-forest-800 hover:bg-forest-900 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors shadow-xs cursor-pointer"
-                      title="Open interactive map to spot and pin store location"
-                    >
-                      <Map className="w-3.5 h-3.5" />
-                      <span>Spot on Map</span>
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-brand-500 mt-1">
-                    Supports any format: Share links (<span className="font-mono">maps.app.goo.gl</span>), place URLs, embed <span className="font-mono">&lt;iframe&gt;</span> codes, or GPS lat/lng.
-                  </p>
-                </div>
-
-                {/* Direct Google Maps Destination URL (Editable) */}
-                <div>
-                  <label className="text-xs font-bold text-brand-900 block mb-1">
-                    Google Maps Destination / Navigation URL
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={content.contact.googleMapsUrl || ''}
-                      onChange={(e) => updateContact('googleMapsUrl', e.target.value)}
-                      onPaste={(e) => {
-                        const val = e.clipboardData.getData('text');
-                        if (val && val.trim()) {
-                          handleAutoResolveAndFillLocation(val.trim());
-                        }
-                      }}
-                      className="input-field font-mono text-xs flex-1"
-                      placeholder="Paste https://maps.app.goo.gl/... or https://www.google.com/maps?q=..."
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (content.contact.googleMapsUrl?.trim()) {
-                          handleAutoResolveAndFillLocation(content.contact.googleMapsUrl.trim());
-                        }
-                      }}
-                      disabled={searchingPlace || !content.contact.googleMapsUrl?.trim()}
-                      className="px-3 py-2 bg-brand-100 hover:bg-brand-200 text-brand-900 rounded-xl text-xs font-semibold shrink-0 transition-colors disabled:opacity-50"
-                      title="Parse this URL and center the map pin"
-                    >
-                      Sync Pin
-                    </button>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-brand-900">
+                      Google Maps Navigation & Share URL
+                    </label>
                     <a
                       href={getStoreGoogleMapsUrl(content.contact)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-2 bg-forest-50 hover:bg-forest-100 border border-forest-200 text-forest-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors"
-                      title="Test opening this exact location in a new Google Maps tab"
+                      className="text-[11px] text-forest-700 hover:text-forest-900 underline flex items-center gap-1 font-semibold"
                     >
-                      <ExternalLink className="w-3.5 h-3.5 text-forest-600" />
-                      <span>Test Link</span>
+                      <ExternalLink className="w-3 h-3 text-forest-600" />
+                      <span>Preview in Maps</span>
                     </a>
                   </div>
+                  <input
+                    type="text"
+                    value={content.contact.googleMapsUrl || ''}
+                    onChange={(e) => {
+                      updateContact('googleMapsUrl', e.target.value);
+                      handleParseMapsLinkOrCoords(e.target.value);
+                    }}
+                    onPaste={(e) => {
+                      const val = e.clipboardData.getData('text');
+                      if (val && val.trim()) {
+                        handleAutoResolveAndFillLocation(val.trim());
+                      }
+                    }}
+                    className="input-field font-mono text-xs w-full"
+                    placeholder="Paste e.g. https://maps.app.goo.gl/... or coordinates"
+                  />
                   <p className="text-[11px] text-brand-500 mt-1">
-                    This link is opened when customers click &ldquo;Open in Google Maps&rdquo; or &ldquo;Navigate to Store&rdquo; across your entire shop.
+                    Paste any Google Maps link, share link, or lat/lng — coordinates and address will automatically sync.
                   </p>
                 </div>
               </div>
@@ -3553,6 +3396,127 @@ export default function AdminContent({ initialTab }: AdminContentProps = {}) {
               >
                 <Check className="w-4 h-4" />
                 <span>Confirm & Apply Location</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Showcase Card Add/Edit Modal */}
+      {showcaseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl border border-brand-200 relative animate-scale-in max-h-[90vh] overflow-y-auto space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-brand-100">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-brand-100 text-brand-800">
+                  <Layers className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-brand-950">
+                    {editingShowcaseIndex !== null ? 'Edit Showcase Card' : 'Add New Showcase Card'}
+                  </h3>
+                  <p className="text-xs text-brand-500">
+                    Configure the title, subtitle, image, and category mapping.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowcaseModalOpen(false)}
+                className="p-2 rounded-full text-brand-400 hover:text-brand-900 hover:bg-cream-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-brand-900 block mb-1">
+                  Card Title / Heading <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={showcaseForm.title}
+                  onChange={(e) => setShowcaseForm((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g. Royal California Almonds, Jumbo Cashews"
+                  className="input-field text-xs sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-brand-900 block mb-1">
+                  Card Subtitle / Tagline
+                </label>
+                <input
+                  type="text"
+                  value={showcaseForm.subtitle || ''}
+                  onChange={(e) => setShowcaseForm((prev) => ({ ...prev, subtitle: e.target.value }))}
+                  placeholder="e.g. Nonpareil Jumbo • Freshly Roasted & Salted"
+                  className="input-field text-xs sm:text-sm"
+                />
+              </div>
+
+              <div>
+                <ImageUploadWidget
+                  label="Showcase Card Photo"
+                  value={showcaseForm.image}
+                  onChange={(url) => setShowcaseForm((prev) => ({ ...prev, image: url }))}
+                  folder="krisha_dry_fruits/showcase"
+                />
+              </div>
+
+              {/* Live Preview Inside Modal */}
+              <div className="pt-2">
+                <label className="text-xs font-bold text-brand-900 block mb-1.5">
+                  Live Card Preview (How it appears to customers):
+                </label>
+                <div className="max-w-xs mx-auto rounded-2xl overflow-hidden border border-brand-200 bg-white shadow-md">
+                  <div className="relative w-full aspect-[16/10] overflow-hidden bg-cream-200">
+                    {showcaseForm.image ? (
+                      <img
+                        src={showcaseForm.image}
+                        alt={showcaseForm.title || 'Preview'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-brand-400">
+                        Upload or paste image above
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 bg-white border-t border-brand-100 flex flex-col justify-between">
+                    <div>
+                      <p className="font-serif text-sm font-bold text-brand-950 leading-tight truncate">
+                        {showcaseForm.title || 'Card Title'}
+                      </p>
+                      <p className="text-[11px] text-brand-600 truncate mt-0.5">
+                        {showcaseForm.subtitle || 'Card Subtitle'}
+                      </p>
+                    </div>
+                    <div className="mt-2 text-[10px] font-semibold text-brand-800 flex items-center gap-1">
+                      <span>Shop Collection</span>
+                      <span>→</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-brand-100">
+              <button
+                type="button"
+                onClick={() => setShowcaseModalOpen(false)}
+                className="btn-outline py-2 px-4 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveShowcaseModal}
+                className="btn-primary py-2 px-5 text-xs font-bold flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>{editingShowcaseIndex !== null ? 'Save Changes' : 'Create Showcase Card'}</span>
               </button>
             </div>
           </div>

@@ -184,7 +184,31 @@ export default function AdminProducts() {
 
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => { setEditProduct(null); setForm(emptyProduct()); setShowForm(true); };
+  const closeForm = () => {
+    setShowForm(false);
+    setEditProduct(null);
+    if (window.history.state?.modal === 'product-form') {
+      window.history.back();
+    }
+  };
+
+  useEffect(() => {
+    const handlePop = (e: PopStateEvent) => {
+      if (showForm && e.state?.modal !== 'product-form') {
+        setShowForm(false);
+        setEditProduct(null);
+      }
+    };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, [showForm]);
+
+  const openAdd = () => {
+    setEditProduct(null);
+    setForm(emptyProduct());
+    window.history.pushState({ adminPage: 'products', modal: 'product-form' }, '', window.location.href);
+    setShowForm(true);
+  };
 
   const openEdit = (p: any) => {
     setEditProduct(p);
@@ -200,6 +224,7 @@ export default function AdminProducts() {
       gallery: [...(p.gallery || []), '', '', '', ''].slice(0, 4),
       types: mergedTypes,
     });
+    window.history.pushState({ adminPage: 'products', modal: 'product-form' }, '', window.location.href);
     setShowForm(true);
   };
 
@@ -220,6 +245,7 @@ export default function AdminProducts() {
       gallery: [...(p.gallery || []), '', '', '', ''].slice(0, 4),
       types: mergedTypes,
     });
+    window.history.pushState({ adminPage: 'products', modal: 'product-form' }, '', window.location.href);
     setShowForm(true);
   };
 
@@ -533,7 +559,7 @@ export default function AdminProducts() {
             </p>
           </div>
           <button
-            onClick={() => setShowForm(false)}
+            onClick={closeForm}
             className="p-2 rounded-xl text-brand-500 hover:text-brand-950 hover:bg-cream-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -1048,7 +1074,7 @@ export default function AdminProducts() {
             </button>
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={closeForm}
               className="btn-outline py-3 px-6 text-xs sm:text-sm font-semibold"
             >
               Cancel

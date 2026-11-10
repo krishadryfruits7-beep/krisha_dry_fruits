@@ -10,8 +10,9 @@ import AdminProducts from './components/AdminProducts';
 import AdminOrders from './components/AdminOrders';
 import AdminOrderDetail from './components/AdminOrderDetail';
 import AdminAdmins from './components/AdminAdmins';
+import AdminDatabase from './components/AdminDatabase';
 
-export type AdminPage = 'dashboard' | 'content' | 'delivery' | 'products' | 'orders' | 'order-detail' | 'admins';
+export type AdminPage = 'dashboard' | 'content' | 'delivery' | 'products' | 'orders' | 'order-detail' | 'admins' | 'database';
 
 export default function AdminApp() {
   // Always call all hooks unconditionally at top level
@@ -23,7 +24,7 @@ export default function AdminApp() {
     if (typeof window === 'undefined') return { page: 'dashboard' as AdminPage, orderId: null };
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab') as AdminPage | null;
-    const validTabs: AdminPage[] = ['dashboard', 'content', 'delivery', 'products', 'orders', 'order-detail', 'admins'];
+    const validTabs: AdminPage[] = ['dashboard', 'content', 'delivery', 'products', 'orders', 'order-detail', 'admins', 'database'];
     const p = tab && validTabs.includes(tab) ? tab : 'dashboard';
     const oId = params.get('orderId');
     return { page: p, orderId: oId };
@@ -279,6 +280,7 @@ export default function AdminApp() {
         <AdminOrderDetail orderId={selectedOrderId} onBack={handleBackFromDetail} />
       )}
       {page === 'admins' && <AdminAdmins />}
+      {page === 'database' && <AdminDatabase />}
     </AdminLayout>
   );
 }

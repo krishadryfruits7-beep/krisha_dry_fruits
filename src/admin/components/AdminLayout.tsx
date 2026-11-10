@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, ShoppingBag, LogOut, Menu, ExternalLink, ShieldCheck, Sparkles, Users, Truck } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, LogOut, Menu, ExternalLink, ShieldCheck, Sparkles, Users, Truck, Database } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useSiteContent } from '@/site-content';
 
@@ -16,6 +16,7 @@ const NAV = [
   { id: 'delivery', label: 'Delivery & Shipping Pricing', icon: Truck },
   { id: 'products', label: 'Products & Inventory', icon: Package },
   { id: 'orders', label: 'Orders & Fulfillment', icon: ShoppingBag },
+  { id: 'database', label: 'Database & Storage', icon: Database },
   { id: 'admins', label: 'Admin Team & Access', icon: Users },
 ];
 
