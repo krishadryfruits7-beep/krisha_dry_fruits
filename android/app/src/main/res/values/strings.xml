@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Krisha Admin</string>
+    <string name="admin_url">https://krishadryfruits.in/admin</string>
+    <string name="notification_channel_id">krisha_orders_channel</string>
+    <string name="notification_channel_name">New Order Alerts</string>
+    <string name="notification_channel_desc">Instant alerts when customers place new orders</string>
+</resources>

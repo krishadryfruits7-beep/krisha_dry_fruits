@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "305997754189",
+    "project_id": "krishadryfruits-f00b2",
+    "storage_bucket": "krishadryfruits-f00b2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:305997754189:android:4b7c8d9e0f1a2b3c4d5e6f",
+        "android_client_info": {
+          "package_name": "com.krishadryfruits.admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDummyKeyKrishaAdminApp1234567890"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

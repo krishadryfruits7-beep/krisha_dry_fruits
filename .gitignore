@@ -25,3 +25,10 @@ dist-ssr
 
 # Local Netlify folder
 .netlify
+
+# Android build outputs
+*.apk
+android/.gradle/
+android/app/build/
+android/local.properties
+android/.cxx/
