@@ -15,11 +15,11 @@ const headers = {
 
 function isAuthorized(event: Parameters<Handler>[0]): boolean {
   const auth = (event.headers['authorization'] || event.headers['Authorization'] || '').replace('Bearer ', '').trim();
+  if (!auth) return false;
   const validSecrets = [
     process.env.ADMIN_SECRET,
     process.env.VITE_ADMIN_PASSKEY,
     'Eternal_Flame',
-    'krisha_admin_2024',
   ].filter(Boolean);
   return validSecrets.includes(auth);
 }

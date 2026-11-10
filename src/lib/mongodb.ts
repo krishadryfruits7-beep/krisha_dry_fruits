@@ -2,12 +2,14 @@ import mongoose from 'mongoose';
 
 let isConnected = false;
 
-const PRIMARY_URI =
-  process.env.MONGODB_URI ||
-  'mongodb+srv://sanjay:Eternal_Flame@cluster0.t8wbojh.mongodb.net/krisha_dry_fruits?retryWrites=true&w=majority';
+const PRIMARY_URI = process.env.MONGODB_URI || '';
 
 export async function connectDB(): Promise<void> {
   if (isConnected && mongoose.connection.readyState === 1) return;
+
+  if (!PRIMARY_URI) {
+    throw new Error('MONGODB_URI environment variable is not defined.');
+  }
 
   try {
     await mongoose.connect(PRIMARY_URI, {

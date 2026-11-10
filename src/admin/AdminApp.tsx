@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, ArrowLeft, AlertCircle, LogOut, Loader2, ArrowRight } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, AlertCircle, LogOut, Loader2, ArrowRight, Mail, KeyRound } from 'lucide-react';
 import { useSiteContent } from '@/site-content';
-import { useUser, useClerk } from '@/auth';
+import { useUser, useClerk, SignIn } from '@/auth';
 import { isAdminAuthorized, useAdminWhitelist } from '@/admin-auth';
 import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './components/AdminDashboard';
@@ -19,6 +19,7 @@ export default function AdminApp() {
   const { isSignedIn, user, isLoaded } = useUser();
   const clerk = useClerk();
   const { emails: adminEmails, isLoading: isLoadingAdmins } = useAdminWhitelist();
+  const [showClerkModal, setShowClerkModal] = useState(false);
 
   const getInitialAdminState = () => {
     if (typeof window === 'undefined') return { page: 'dashboard' as AdminPage, orderId: null };
@@ -90,8 +91,24 @@ export default function AdminApp() {
       (isAdminAuthorized(userEmail) || adminEmails.includes(userEmail.trim().toLowerCase()))
   );
 
+  // Sync authentication state to native Android container for FCM push alerts
+  useEffect(() => {
+    if (isLoaded && isSignedIn && isGoogleAdmin && userEmail) {
+      if (typeof window !== 'undefined' && (window as any).AndroidBridge?.onAdminAuthenticated) {
+        (window as any).AndroidBridge.onAdminAuthenticated(userEmail);
+      }
+    } else if (isLoaded && (!isSignedIn || !isGoogleAdmin)) {
+      if (typeof window !== 'undefined' && (window as any).AndroidBridge?.onAdminLoggedOut) {
+        (window as any).AndroidBridge.onAdminLoggedOut();
+      }
+    }
+  }, [isLoaded, isSignedIn, isGoogleAdmin, userEmail]);
+
   const handleLogout = async () => {
     try {
+      if (typeof window !== 'undefined' && (window as any).AndroidBridge?.onAdminLoggedOut) {
+        (window as any).AndroidBridge.onAdminLoggedOut();
+      }
       await clerk.signOut();
     } catch (e) {
       console.warn('Sign out error', e);
@@ -100,9 +117,8 @@ export default function AdminApp() {
 
   const handleGoogleSignIn = () => {
     try {
-      clerk.openSignIn({ fallbackRedirectUrl: window.location.href });
+      clerk.openSignIn({ fallbackRedirectUrl: '/admin' });
     } catch {
-      // Fallback redirect if popup is blocked
       window.location.href = '/admin';
     }
   };
@@ -204,15 +220,16 @@ export default function AdminApp() {
             </p>
           </div>
 
-          {/* Primary Authentication: Google Sign-in */}
+          {/* Dual Authentication Methods */}
           <div className="space-y-4">
+            {/* 1. Google OAuth (Redirect-based, WebView-safe) */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
               className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-white border-2 border-brand-200 hover:border-brand-500 text-brand-950 text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 group cursor-pointer"
             >
               {/* Google 'G' Logo SVG */}
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -230,35 +247,71 @@ export default function AdminApp() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>Sign In with Authorized Google Account</span>
+              <span>Sign In with Authorized Google</span>
               <ArrowRight className="w-4 h-4 ml-auto text-brand-400 group-hover:translate-x-1 transition-transform" />
+            </button>
+
+            {/* 2. Direct Admin Email OTP / Password Option */}
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  clerk.openSignIn({ fallbackRedirectUrl: window.location.href });
+                } catch {
+                  setShowClerkModal(true);
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-2xl bg-cream-50 hover:bg-cream-100 border border-brand-200 text-brand-800 text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+            >
+              <Mail className="w-4 h-4 text-brand-600" />
+              <span>Sign In with Admin Email / Passcode</span>
             </button>
 
             <div className="p-4 rounded-2xl bg-cream-50/80 border border-brand-200/90 text-left space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-bold text-brand-900">
                 <ShieldCheck className="w-4 h-4 text-forest-600" />
-                <span>Google OAuth Secured</span>
+                <span>Executive Security Protocol</span>
               </div>
               <p className="text-[11px] text-brand-600 leading-relaxed">
-                Sign in with your authorized executive Google account to manage products, inventories, orders, and content.
+                Sign in with your verified executive Gmail (<span className="font-semibold text-brand-800">sanjayparihar0625@gmail.com</span>, <span className="font-semibold text-brand-800">krishadryfruits7@gmail.com</span>, or registered admin email) to access the console.
               </p>
             </div>
           </div>
 
           <div className="mt-8 pt-6 border-t border-brand-100 flex items-center justify-between text-xs text-brand-500">
-            <a
-              href="/"
-              className="inline-flex items-center gap-1.5 hover:text-brand-900 transition-colors font-medium"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Return to Storefront</span>
-            </a>
-            <span className="flex items-center gap-1 text-[11px] text-forest-700 font-semibold">
+            {typeof window !== 'undefined' && (window as any).AndroidBridge?.isAndroidApp?.() ? (
+              <span className="text-[11px] text-brand-400 font-medium">Krisha Admin Mobile Edition</span>
+            ) : (
+              <a
+                href="/"
+                className="inline-flex items-center gap-1.5 hover:text-brand-900 transition-colors font-medium"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Return to Storefront</span>
+              </a>
+            )}
+            <span className="flex items-center gap-1 text-[11px] text-forest-700 font-semibold ml-auto">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Authorized Access Only</span>
             </span>
           </div>
         </div>
+
+        {/* Optional Embedded Clerk Sign-In Modal */}
+        {showClerkModal && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full relative shadow-2xl flex flex-col items-center">
+              <button
+                type="button"
+                onClick={() => setShowClerkModal(false)}
+                className="absolute top-4 right-4 p-2 text-brand-400 hover:text-brand-900 rounded-full"
+              >
+                ✕
+              </button>
+              <SignIn fallbackRedirectUrl="/admin" />
+            </div>
+          </div>
+        )}
       </div>
     );
   }

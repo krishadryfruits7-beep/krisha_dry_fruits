@@ -72,15 +72,13 @@ export const handler: Handler = async (event) => {
     }
 
     if (event.httpMethod === 'GET') {
-      const email = event.queryStringParameters?.email || event.queryStringParameters?.search;
-      if (email && email.trim()) {
-        const cleanSearch = email.trim();
+      const email = (event.queryStringParameters?.email || '').trim().toLowerCase();
+      const search = (event.queryStringParameters?.search || '').trim();
+
+      if (email && email.includes('@') && email.length >= 5) {
+        // Safe exact customer email query
         const orders = await Order.find({
-          $or: [
-            { 'customer.email': { $regex: cleanSearch, $options: 'i' } },
-            { 'customer.phone': { $regex: cleanSearch, $options: 'i' } },
-            { orderId: { $regex: cleanSearch, $options: 'i' } },
-          ],
+          'customer.email': email,
         })
           .sort({ createdAt: -1 })
           .limit(50)
@@ -88,12 +86,30 @@ export const handler: Handler = async (event) => {
         return { statusCode: 200, headers, body: JSON.stringify({ orders }) };
       }
 
-      const orderId = event.queryStringParameters?.orderId || event.queryStringParameters?.id;
-      if (!orderId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'orderId or email required' }) };
-      let order = await Order.findOne({ orderId }).lean();
-      if (!order && mongoose.Types.ObjectId.isValid(orderId)) {
-        order = await Order.findById(orderId).lean();
+      if (search) {
+        // Exact phone or exact orderId query (prevent wildcard database scraping)
+        const cleanPhone = search.replace(/[^\d+]/g, '');
+        const queryConditions: any[] = [{ orderId: search }];
+
+        if (cleanPhone.length >= 10) {
+          queryConditions.push({ 'customer.phone': cleanPhone });
+        }
+
+        const orders = await Order.find({ $or: queryConditions })
+          .sort({ createdAt: -1 })
+          .limit(20)
+          .lean();
+        return { statusCode: 200, headers, body: JSON.stringify({ orders }) };
       }
+
+      const orderId = (event.queryStringParameters?.orderId || event.queryStringParameters?.id || '').trim();
+      if (!orderId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'orderId or email required' }) };
+
+      const query = mongoose.Types.ObjectId.isValid(orderId)
+        ? { $or: [{ _id: orderId }, { orderId }] }
+        : { orderId };
+
+      const order = await Order.findOne(query).lean();
       if (!order) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
       return { statusCode: 200, headers, body: JSON.stringify(order) };
     }

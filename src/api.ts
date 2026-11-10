@@ -13,7 +13,7 @@ function getAdminSecret(): string {
   return (
     (import.meta.env.VITE_ADMIN_PASSKEY as string) ||
     (import.meta.env.VITE_ADMIN_SECRET as string) ||
-    'krisha_admin_2024'
+    ''
   );
 }
 

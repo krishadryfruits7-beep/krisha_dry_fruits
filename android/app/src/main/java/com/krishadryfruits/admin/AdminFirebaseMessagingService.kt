@@ -23,12 +23,17 @@ class AdminFirebaseMessagingService : FirebaseMessagingService() {
         const val CHANNEL_NAME = "New Order Alerts"
         const val TOPIC_ORDERS = "admin_orders"
 
-        fun subscribeToOrderAlerts() {
+        const val PREFS_NAME = "krisha_admin_secure_prefs"
+        const val KEY_IS_ADMIN_AUTHENTICATED = "is_admin_authenticated"
+
+        fun subscribeToOrderAlerts(context: Context? = null) {
             try {
                 FirebaseMessaging.getInstance().subscribeToTopic(TOPIC_ORDERS)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             Log.d(TAG, "Subscribed successfully to FCM topic: $TOPIC_ORDERS")
+                            context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                                ?.edit()?.putBoolean(KEY_IS_ADMIN_AUTHENTICATED, true)?.apply()
                         } else {
                             Log.w(TAG, "Failed to subscribe to FCM topic: $TOPIC_ORDERS", task.exception)
                         }
@@ -37,12 +42,28 @@ class AdminFirebaseMessagingService : FirebaseMessagingService() {
                 Log.e(TAG, "Error subscribing to topic", e)
             }
         }
+
+        fun unsubscribeFromOrderAlerts(context: Context? = null) {
+            try {
+                FirebaseMessaging.getInstance().unsubscribeFromTopic(TOPIC_ORDERS)
+                    .addOnCompleteListener { task ->
+                        Log.d(TAG, "Unsubscribed from FCM topic: $TOPIC_ORDERS (Success: ${task.isSuccessful})")
+                        context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                            ?.edit()?.putBoolean(KEY_IS_ADMIN_AUTHENTICATED, false)?.apply()
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error unsubscribing from topic", e)
+            }
+        }
     }
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d(TAG, "New FCM Registration Token: $token")
-        subscribeToOrderAlerts()
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_IS_ADMIN_AUTHENTICATED, false)) {
+            subscribeToOrderAlerts(this)
+        }
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {

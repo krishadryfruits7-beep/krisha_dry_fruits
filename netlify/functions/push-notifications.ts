@@ -19,19 +19,16 @@ function getServiceAccount(): any {
   }
 
   // 2. Try reading local credentials file if present
-  const possiblePaths = [
-    path.resolve(process.cwd(), 'krishadryfruits-f00b2-firebase-adminsdk-fbsvc-3cd00618c9.json'),
-    path.resolve(process.cwd(), 'serviceAccountKey.json'),
-  ];
-
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      try {
-        cachedServiceAccount = JSON.parse(fs.readFileSync(p, 'utf8'));
-        return cachedServiceAccount;
-      } catch {}
+  try {
+    const cwd = process.cwd();
+    const files = fs.readdirSync(cwd);
+    const saFile = files.find((f) => f.includes('firebase-adminsdk') && f.endsWith('.json')) || 'serviceAccountKey.json';
+    const saPath = path.resolve(cwd, saFile);
+    if (fs.existsSync(saPath)) {
+      cachedServiceAccount = JSON.parse(fs.readFileSync(saPath, 'utf8'));
+      return cachedServiceAccount;
     }
-  }
+  } catch {}
 
   return null;
 }

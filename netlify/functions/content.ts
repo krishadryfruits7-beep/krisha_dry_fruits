@@ -197,13 +197,7 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    const permanentAdmins = ['sanjayparihar0625@gmail.com', 'krishadryfruits7@gmail.com'];
-    const storedAdmins = Array.isArray(doc.adminEmails) ? doc.adminEmails : [];
-    const mergedAdmins = Array.from(
-      new Set([...permanentAdmins, ...storedAdmins.map((e: string) => e.trim().toLowerCase()).filter(Boolean)])
-    );
-
-    // Merge with DEFAULT_SITE_CONTENT to guarantee all fields exist
+    // Merge with DEFAULT_SITE_CONTENT to guarantee all fields exist (exclude adminEmails from public payload)
     const merged = {
       ...DEFAULT_SITE_CONTENT,
       logo: doc.logo || DEFAULT_SITE_CONTENT.logo,
@@ -217,7 +211,6 @@ export const handler: Handler = async (event) => {
       delivery: { ...DEFAULT_SITE_CONTENT.delivery, ...(doc.delivery || {}) },
       social: { ...DEFAULT_SITE_CONTENT.social, ...(doc.social || {}) },
       footerBio: doc.footerBio ?? DEFAULT_SITE_CONTENT.footerBio,
-      adminEmails: mergedAdmins,
     };
 
     return { statusCode: 200, headers, body: JSON.stringify(merged) };
@@ -226,10 +219,7 @@ export const handler: Handler = async (event) => {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        ...DEFAULT_SITE_CONTENT,
-        adminEmails: ['sanjayparihar0625@gmail.com', 'krishadryfruits7@gmail.com'],
-      }),
+      body: JSON.stringify(DEFAULT_SITE_CONTENT),
     };
   }
 };
