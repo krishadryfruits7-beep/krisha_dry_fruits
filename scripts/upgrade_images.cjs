@@ -2,9 +2,9 @@ const cloudinary = require('cloudinary').v2;
 const mongoose = require('mongoose');
 
 cloudinary.config({
-  cloud_name: 'dqb3zf1bw',
-  api_key: '388267589543518',
-  api_secret: 'rKOS1NkJwtQcRxdmawOOIbjzXqg'
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 const highResStudioPhotos = {
@@ -28,7 +28,11 @@ async function upgradePhotos() {
     console.log('  -> Uploaded:', res.secure_url);
   }
 
-  const uri = 'mongodb+srv://sanjay:Eternal_Flame@cluster0.t8wbojh.mongodb.net/krisha_dry_fruits?retryWrites=true&w=majority';
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.error('MONGODB_URI environment variable is required.');
+    process.exit(1);
+  }
   await mongoose.connect(uri);
   const col = mongoose.connection.db.collection('products');
 
